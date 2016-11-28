@@ -5,14 +5,18 @@ mod parser;
 mod tests {
     use super::parser;
     use std::path::Path;
+    use std::fs::File;
+    use std::io::BufReader;
 
     #[test]
     fn example() {
         // replace it with the path to the output.inputs.txt
         // e.g. /home/me/Desktop/output.inputs.txt
-        let path = Path::new("./output.inputs.txt");
+        let path = Path::new("/home/andreas/Desktop/output.inputs.txt");
+        let reader = BufReader::new(try!(File::open(path)));
 
-        let input_gates = parser::parse_input_gates(path).unwrap();
+
+        let input_gates = !try(parser::parse_input_gates(reader));
         let mut i = 0;
         for gate in input_gates {
             println!("Input gate: {}", i);
