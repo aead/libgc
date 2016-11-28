@@ -12,7 +12,7 @@ pub struct Wire {
 }
 pub type InputGate = Vec<Wire>;
 
-pub fn parse_input_gates<R: Read>(from: &mut BufReader<R>) -> Result<Vec<InputGate>, Error> {
+pub fn parse_input_gates<R: Read>(from: BufReader<R>) -> Result<Vec<InputGate>, Error> {
     let mut in_gates = Vec::new();
 
     let mut line_nr: u64 = 0;
@@ -73,4 +73,65 @@ pub fn parse_input_gates<R: Read>(from: &mut BufReader<R>) -> Result<Vec<InputGa
     }
 
     Ok(in_gates)
+}
+
+
+#[derive(Debug)]
+pub struct Gate {
+    val: u8,
+}
+
+#[derive(Debug)]
+pub enum GateType {
+    And,
+    Xor,
+    Or,
+    Not,
+}
+
+const AND_GATE: u8 = 0x0;
+const XOR_GATE: u8 = 0x8;
+const OR_GATE: u8 = 0x10;
+const NOT_GATE: u8 = 0x18;
+
+const GATE_MASK: u8 = 0xE7;
+
+impl Gate {
+
+     pub fn new(gate_type: GateType, left: u8, right: u8) -> Gate{
+         let mut gate: Gate = match gate_type {
+             GateType::And => Gate{val: AND_GATE},
+             GateType::Xor => Gate{val: XOR_GATE},
+             GateType::Or => Gate{val: OR_GATE},
+             GateType::Not => Gate{val: NOT_GATE},
+         };
+         gate.left_pin(left);
+         gate.right_pin(right);
+         gate
+     }
+    
+     pub fn left_pin(self: &mut Gate, val: u8) {
+         self.val = (self.val & 0x7F) |  (val & 0x80);
+     }
+
+     pub fn right_pin(self: &mut Gate, val: u8) {
+         self.val = (self.val & 0xFE) |  (val & 0x1);
+     }
+
+     pub fn evaluate(self: &Gate) -> u8{
+         let lp = (self.val & 0x7F) >> 7;
+         let rp = self.val & 0x1;
+
+         let gate_type = self.val & GATE_MASK;
+         if gate_type == XOR_GATE{
+             return lp & rp;
+         }else if gate_type == AND_GATE{
+             return lp ^ rp;
+         }else if gate_type == OR_GATE{
+             return lp | rp;
+         }else if gate_type == NOT_GATE{
+             return (lp & 1) ^ 1;
+         }
+         panic!("unknown gate type");
+     }
 }
