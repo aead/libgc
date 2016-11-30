@@ -2,6 +2,7 @@ use std::io::Error;
 use std::io::ErrorKind::*;
 use std::io::prelude::*;
 use std::vec::Vec;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct Wire {
@@ -21,6 +22,17 @@ pub enum GateType {
     Xor,
     Or,
     Not,
+}
+
+impl fmt::Display for GateType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            GateType::And => write!(f, "{}", "AND"),
+            GateType::Xor => write!(f, "{}", "XOR"),
+            GateType::Or => write!(f, "{}", "OR "),
+            GateType::Not => write!(f, "{}", "NOT"),
+        }
+    }
 }
 
 pub type InputGate = Vec<Wire>;
@@ -59,9 +71,9 @@ impl Gate {
 
         let gate_type = self.val & GATE_MASK;
         if gate_type == XOR_GATE {
-            return lp & rp;
-        } else if gate_type == AND_GATE {
             return lp ^ rp;
+        } else if gate_type == AND_GATE {
+            return lp & rp;
         } else if gate_type == OR_GATE {
             return lp | rp;
         } else if gate_type == NOT_GATE {
@@ -72,6 +84,23 @@ impl Gate {
 
     pub fn connect_to(self: &mut Gate, w: Wire){
         self.conn.push(w)
+    }
+
+    pub fn get_connections(self: &Gate) -> &[Wire]{
+        self.conn.as_ref()
+    }
+
+    pub fn get_type(self: &Gate) -> GateType{
+        let gate_type = self.val & GATE_MASK;
+        if gate_type == XOR_GATE {
+            GateType::Xor
+        } else if gate_type == AND_GATE {
+            GateType::And
+        } else if gate_type == OR_GATE {
+            GateType::Or
+        } else {
+            GateType::Not
+        }
     }
 }
 
