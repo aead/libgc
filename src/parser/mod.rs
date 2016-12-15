@@ -10,31 +10,37 @@ use std::fs::File;
 
 use std::vec::Vec;
 
+use std::string::String;
+
 use std::fmt;
+
+use super::circuit::Circuit;
 
 #[derive(Debug)]
 pub struct Parser<'a> {
     path: &'a Path,
-
-    gates: Vec<Gate>,
 }
+
+const NUM_OF_GATES: &'static str = "output.numberofgates.txt";
+const NUM_OF_OUTUT_BITS: &'static str = "output.noob.txt";
+const GATES: &'static str = "output.gate.txt";
+const INPUT_GATES: &'static str = "output.inputs.txt";
 
 impl <'a> Parser<'a> {
     pub fn new(path: &Path) -> Parser{
         Parser{
             path: path,
-            gates: Vec::new(),
         }
     }
 
     pub fn parse_number_of_gates(&self) -> Result<u64,Error>{
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
-        pathbuf.push(Path::new("output.numberofgates.txt"));
+        pathbuf.push(Path::new(NUM_OF_GATES));
 
         let mut buf = String::new();
         let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
-        reader.read_line(&mut buf);
+        try!(reader.read_line(&mut buf));
         match buf.trim().parse::<u64>(){
             Ok(val) => Ok(val),
             Err(why) => Err(Error::new(InvalidData, why)),
@@ -44,42 +50,52 @@ impl <'a> Parser<'a> {
     pub fn parse_number_of_output_bits(&self) -> Result<u64,Error>{
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
-        pathbuf.push(Path::new("output.noob.txt"));
+        pathbuf.push(Path::new(NUM_OF_OUTUT_BITS));
         
         let mut buf = String::new();
         let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
-        reader.read_line(&mut buf);
+        try!(reader.read_line(&mut buf));
         match buf.trim().parse::<u64>(){
             Ok(val) => Ok(val),
             Err(why) => Err(Error::new(InvalidData, why)),
         }
     }
 
-    pub fn parse_gates(&mut self) -> Result<&Vec<Gate>,Error>{
+    pub fn parse_gates(&mut self) -> Result<Vec<Gate>,Error>{
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
-        pathbuf.push(Path::new("output.gate.txt"));
+        pathbuf.push(Path::new(GATES));
         let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
-        let mut gates = try!(_parse_gates(reader.lines()));
-
-        let mut pathbuf = PathBuf::new();
-        pathbuf.push(self.path);
-        pathbuf.push(Path::new("output.inputs.txt"));
-        let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
-        let input_gates = try!(_parse_input_gates(reader.lines()));
-
-        self.gates = input_gates;
-        self.gates.extend(gates);
-
-        // TODO: consider output gates
-
-        Ok(self.gates.as_ref())
+        _parse_gates(reader.lines())
     }
 
-    pub fn get_gates(&self) -> &Vec<Gate> { self.gates.as_ref() }
+    pub fn parse_input_gates(&mut self) -> Result<Vec<Gate>,Error>{
+        let mut pathbuf = PathBuf::new();
+        pathbuf.push(self.path);
+        pathbuf.push(Path::new(INPUT_GATES));
+        let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
+       _parse_input_gates(reader.lines())
+    }
+
+    pub fn create_circuit(&mut self) -> Result<Circuit,Error>{
+        let mut num_of_out = try!(self.parse_number_of_output_bits());
+        let mut output_gates = Vec::new();
+        let mut id = -1;
+        while num_of_out > 0 {
+            output_gates.push(Gate::new(1, GateType::Output, id));
+            id -= 1;
+            num_of_out -= 1;
+        }
+
+        Ok(Circuit::new(
+            try!(self.parse_input_gates()),
+            try!(self.parse_gates()),
+            output_gates,
+        ))
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct Wire{
     src_pin: u8,
     dst_pin: u8,
@@ -98,7 +114,7 @@ impl fmt::Display for Wire {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct Gate {
     pins: u8,
     gate_type: GateType,
@@ -127,9 +143,10 @@ impl fmt::Display for Gate {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub enum GateType {
     Input,
+    Output,
     And,
     Xor,
     Or,
@@ -140,6 +157,7 @@ impl fmt::Display for GateType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", match *self {
             GateType::Input => "Input",
+            GateType::Output => "Output",
             GateType::And => "AND",
             GateType::Xor => "XOR",
             GateType::Or => "OR",
