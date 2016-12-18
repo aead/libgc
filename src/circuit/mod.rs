@@ -45,14 +45,14 @@ impl Circuit{
         }
 
         let mut top_gates: Vec<Gate> = Vec::with_capacity(self.gates.len());
+        let mut marked = Vec::new();
         loop {
-            let ( mut done, mut n, mut marked) = (true, 0, Vec::new());
+            let ( mut done, mut n) = (true, 0);
 
             // mark
-            while n < nodes.len() {
-                let node = n as usize;
-                match nodes[node] {
-                    0 => marked.push(node),
+            for node in &nodes {
+                match *node {
+                    0 => marked.push(n),
                     -1 => (),
                     _ => done = false,
                 };
@@ -64,7 +64,8 @@ impl Circuit{
             }
 
             // sweep
-            for node in marked{
+            for node in &marked {
+                let node = *node;
                 let ref gate = self.gates[node];
                 for wire in gate.wires(){
                     if !wire.is_output() {
@@ -78,6 +79,9 @@ impl Circuit{
             if done {
                 break;
             }
+
+            // unmark
+            marked.clear();
         }
 
         self.gates = top_gates;
