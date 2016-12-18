@@ -230,7 +230,7 @@ fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                 Err(why) => {
                     return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
                 }
-                Ok(val) => val - 1, // the compiler id's starts at 1, but we startat 0
+                Ok(val) => val - 1, // the compiler ids starts at 1, but we start at 0
             };
             let dst =match w[2].parse::<u8>() {
                 Err(why) => {
@@ -306,7 +306,7 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                 Err(why) => {
                     return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
                 }
-                Ok(val) => val - 1, // the compiler id's starts at 1, but we startat 0
+                Ok(val) => val - 1, // the compiler ids starts at 1, but we start at 0
             };
             let dst = match w[2].trim().parse::<u8>() {
                 Err(why) => {
