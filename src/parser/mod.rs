@@ -26,14 +26,12 @@ const NUM_OF_OUTUT_BITS: &'static str = "output.noob.txt";
 const GATES: &'static str = "output.gate.txt";
 const INPUT_GATES: &'static str = "output.inputs.txt";
 
-impl <'a> Parser<'a> {
-    pub fn new(path: &Path) -> Parser{
-        Parser{
-            path: path,
-        }
+impl<'a> Parser<'a> {
+    pub fn new(path: &Path) -> Parser {
+        Parser { path: path }
     }
 
-    pub fn parse_number_of_gates(&self) -> Result<usize,Error>{
+    pub fn parse_number_of_gates(&self) -> Result<usize, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(NUM_OF_GATES));
@@ -41,27 +39,27 @@ impl <'a> Parser<'a> {
         let mut buf = String::new();
         let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
         try!(reader.read_line(&mut buf));
-        match buf.trim().parse::<usize>(){
+        match buf.trim().parse::<usize>() {
             Ok(val) => Ok(val),
             Err(why) => Err(Error::new(InvalidData, why)),
         }
     }
 
-    pub fn parse_number_of_output_bits(&self) -> Result<usize,Error>{
+    pub fn parse_number_of_output_bits(&self) -> Result<usize, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(NUM_OF_OUTUT_BITS));
-        
+
         let mut buf = String::new();
         let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
         try!(reader.read_line(&mut buf));
-        match buf.trim().parse::<usize>(){
+        match buf.trim().parse::<usize>() {
             Ok(val) => Ok(val),
             Err(why) => Err(Error::new(InvalidData, why)),
         }
     }
 
-    pub fn parse_gates(&mut self) -> Result<Vec<Gate>,Error>{
+    pub fn parse_gates(&mut self) -> Result<Vec<Gate>, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(GATES));
@@ -69,15 +67,15 @@ impl <'a> Parser<'a> {
         _parse_gates(reader.lines())
     }
 
-    pub fn parse_input_gates(&mut self) -> Result<Vec<Gate>,Error>{
+    pub fn parse_input_gates(&mut self) -> Result<Vec<Gate>, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(INPUT_GATES));
         let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
-       _parse_input_gates(reader.lines())
+        _parse_input_gates(reader.lines())
     }
 
-    pub fn create_circuit(&mut self) -> Result<Circuit,Error>{
+    pub fn create_circuit(&mut self) -> Result<Circuit, Error> {
         let mut num_of_out = try!(self.parse_number_of_output_bits());
         let mut output_gates = Vec::new();
         let mut id = -1;
@@ -87,16 +85,14 @@ impl <'a> Parser<'a> {
             num_of_out -= 1;
         }
 
-        Ok(Circuit::new(
-            try!(self.parse_input_gates()),
-            try!(self.parse_gates()),
-            output_gates,
-        ))
+        Ok(Circuit::new(try!(self.parse_input_gates()),
+                        try!(self.parse_gates()),
+                        output_gates))
     }
 }
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct Wire{
+pub struct Wire {
     src_pin: u8,
     dst_pin: u8,
     dst_id: i64,
@@ -104,16 +100,28 @@ pub struct Wire{
 
 impl Wire {
     pub fn new(src_pin: u8, dst_pin: u8, dst_id: i64) -> Wire {
-        Wire { src_pin: src_pin, dst_pin: dst_pin, dst_id: dst_id }
+        Wire {
+            src_pin: src_pin,
+            dst_pin: dst_pin,
+            dst_id: dst_id,
+        }
     }
 
-    pub fn src_pin(&self) -> u8 { self.src_pin }
+    pub fn src_pin(&self) -> u8 {
+        self.src_pin
+    }
 
-    pub fn dst_pin(&self) -> u8 { self.dst_pin }
+    pub fn dst_pin(&self) -> u8 {
+        self.dst_pin
+    }
 
-    pub fn dst_gate(&self) -> i64 { self.dst_id }
+    pub fn dst_gate(&self) -> i64 {
+        self.dst_id
+    }
 
-    pub fn is_output(self) -> bool { self.dst_id < 0 }
+    pub fn is_output(self) -> bool {
+        self.dst_id < 0
+    }
 }
 
 impl fmt::Display for Wire {
@@ -133,19 +141,37 @@ pub struct Gate {
 
 impl Gate {
     pub fn new(n_pins: u8, gate_type: GateType, gate_id: i64) -> Gate {
-        Gate { pins: n_pins, gate_type: gate_type, id: gate_id, wires: Vec::new() }
+        Gate {
+            pins: n_pins,
+            gate_type: gate_type,
+            id: gate_id,
+            wires: Vec::new(),
+        }
     }
 
-    pub fn pins(&self) -> u8 { self.pins }
+    pub fn pins(&self) -> u8 {
+        self.pins
+    }
 
-    pub fn gate_type(&self) -> GateType { self.gate_type }
+    pub fn gate_type(&self) -> GateType {
+        self.gate_type
+    }
 
-    pub fn id(&self) -> i64 { self.id }
+    pub fn id(&self) -> i64 {
+        self.id
+    }
 
-    pub fn wires(&self) -> &[Wire] { self.wires.as_slice() }
+    pub fn wires(&self) -> &[Wire] {
+        self.wires.as_slice()
+    }
 
-    pub fn copy(&self) -> Gate{
-        let mut gate = Gate { pins: self.pins, gate_type: self.gate_type, id: self.id, wires: Vec::with_capacity(self.wires.len()) };
+    pub fn copy(&self) -> Gate {
+        let mut gate = Gate {
+            pins: self.pins,
+            gate_type: self.gate_type,
+            id: self.id,
+            wires: Vec::with_capacity(self.wires.len()),
+        };
         gate.wires.extend_from_slice(self.wires());
         gate
     }
@@ -177,14 +203,16 @@ pub enum GateType {
 
 impl fmt::Display for GateType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match *self {
-            GateType::Input => "Input",
-            GateType::Output => "Output",
-            GateType::And => "AND",
-            GateType::Xor => "XOR",
-            GateType::Or => "OR",
-            GateType::Not => "NOT",
-        })
+        write!(f,
+               "{}",
+               match *self {
+                   GateType::Input => "Input",
+                   GateType::Output => "Output",
+                   GateType::And => "AND",
+                   GateType::Xor => "XOR",
+                   GateType::Or => "OR",
+                   GateType::Not => "NOT",
+               })
     }
 }
 
@@ -232,7 +260,7 @@ fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                 }
                 Ok(val) => val - 1, // the compiler ids starts at 1, but we start at 0
             };
-            let dst =match w[2].parse::<u8>() {
+            let dst = match w[2].parse::<u8>() {
                 Err(why) => {
                     return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
                 }
@@ -278,9 +306,7 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
         };
 
         let num_pins = match tokens[1].trim().parse::<u8>() {
-             Err(why) => {
-                return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-            }
+            Err(why) => return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why))),
             Ok(val) => val,
         };
 
@@ -296,7 +322,7 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                                               token)));
             }
 
-           let src = match w[0].trim().parse::<u8>() {
+            let src = match w[0].trim().parse::<u8>() {
                 Err(why) => {
                     return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
                 }
