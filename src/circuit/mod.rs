@@ -3,9 +3,8 @@ use std::fmt;
 use std::fmt::Display;
 
 use std::vec::Vec;
-use std::ops::Index;
 
-use super::parser::Gate;
+use super::parser::gate::Gate;
 
 pub struct Circuit {
     input_gates: Vec<Gate>,

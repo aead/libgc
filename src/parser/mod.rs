@@ -1,30 +1,27 @@
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::Error;
-use std::io::ErrorKind::*;
 
-use std::path::Path;
-use std::path::PathBuf;
-
-use std::fs::File;
-
-use std::vec::Vec;
-
-use std::string::String;
-
-use std::fmt;
+pub mod gate;
+pub mod wire;
 
 use super::circuit::Circuit;
+use self::gate::{Gate, GateType};
+use self::wire::Wire;
 
-#[derive(Debug)]
-pub struct Parser<'a> {
-    path: &'a Path,
-}
+use std::io::{BufRead, BufReader, Error};
+use std::io::ErrorKind::*;
+use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::vec::Vec;
+use std::string::String;
 
 const NUM_OF_GATES: &'static str = "output.numberofgates.txt";
 const NUM_OF_OUTUT_BITS: &'static str = "output.noob.txt";
 const GATES: &'static str = "output.gate.txt";
 const INPUT_GATES: &'static str = "output.inputs.txt";
+
+#[derive(Debug)]
+pub struct Parser<'a> {
+    path: &'a Path,
+}
 
 impl<'a> Parser<'a> {
     pub fn new(path: &Path) -> Parser {
@@ -91,130 +88,6 @@ impl<'a> Parser<'a> {
     }
 }
 
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct Wire {
-    src_pin: u8,
-    dst_pin: u8,
-    dst_id: i64,
-}
-
-impl Wire {
-    pub fn new(src_pin: u8, dst_pin: u8, dst_id: i64) -> Wire {
-        Wire {
-            src_pin: src_pin,
-            dst_pin: dst_pin,
-            dst_id: dst_id,
-        }
-    }
-
-    pub fn src_pin(&self) -> u8 {
-        self.src_pin
-    }
-
-    pub fn dst_pin(&self) -> u8 {
-        self.dst_pin
-    }
-
-    pub fn dst_gate(&self) -> i64 {
-        self.dst_id
-    }
-
-    pub fn is_output(self) -> bool {
-        self.dst_id < 0
-    }
-}
-
-impl fmt::Display for Wire {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.src_pin, self.dst_id, self.dst_pin)
-    }
-}
-
-#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct Gate {
-    pins: u8,
-    gate_type: GateType,
-    id: i64,
-    wires: Vec<Wire>,
-}
-
-
-impl Gate {
-    pub fn new(n_pins: u8, gate_type: GateType, gate_id: i64) -> Gate {
-        Gate {
-            pins: n_pins,
-            gate_type: gate_type,
-            id: gate_id,
-            wires: Vec::new(),
-        }
-    }
-
-    pub fn pins(&self) -> u8 {
-        self.pins
-    }
-
-    pub fn gate_type(&self) -> GateType {
-        self.gate_type
-    }
-
-    pub fn id(&self) -> i64 {
-        self.id
-    }
-
-    pub fn wires(&self) -> &[Wire] {
-        self.wires.as_slice()
-    }
-
-    pub fn copy(&self) -> Gate {
-        let mut gate = Gate {
-            pins: self.pins,
-            gate_type: self.gate_type,
-            id: self.id,
-            wires: Vec::with_capacity(self.wires.len()),
-        };
-        gate.wires.extend_from_slice(self.wires());
-        gate
-    }
-}
-
-impl fmt::Display for Gate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{} {} {}", self.id, self.gate_type, self.pins));
-        if self.wires.len() > 0 {
-            try!(write!(f, " -> "));
-        }
-        let wires: &Vec<Wire> = self.wires.as_ref();
-        for wire in wires {
-            try!(write!(f, "{} ", wire))
-        }
-        write!(f, "")
-    }
-}
-
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub enum GateType {
-    Input,
-    Output,
-    And,
-    Xor,
-    Or,
-    Not,
-}
-
-impl fmt::Display for GateType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "{}",
-               match *self {
-                   GateType::Input => "Input",
-                   GateType::Output => "Output",
-                   GateType::And => "AND",
-                   GateType::Xor => "XOR",
-                   GateType::Or => "OR",
-                   GateType::Not => "NOT",
-               })
-    }
-}
 
 fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
     where I: Iterator<Item = Result<String, Error>>
@@ -266,7 +139,7 @@ fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                 }
                 Ok(val) => val,
             };
-            gate.wires.push(Wire::new(src, dst, id));
+            gate.connect(Wire::new(src, dst, id));
         }
 
         gates.push(gate);
@@ -341,7 +214,7 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
                 Ok(val) => val,
             };
 
-            gate.wires.push(Wire::new(src, dst, id));
+            gate.connect(Wire::new(src, dst, id));
         }
         gates.push(gate);
 
