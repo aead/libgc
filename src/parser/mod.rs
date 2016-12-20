@@ -2,16 +2,17 @@
 pub mod gate;
 pub mod wire;
 
-use super::circuit::Circuit;
-use self::gate::{Gate, GateType};
-use self::wire::Wire;
+use super::circuit;
+use self::gate::GateType;
 
-use std::io::{BufRead, BufReader, Error};
-use std::io::ErrorKind::*;
+use std::io;
+use std::io::ErrorKind;
+use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::vec::Vec;
 use std::string::String;
+use std::fmt;
 
 const NUM_OF_GATES: &'static str = "output.numberofgates.txt";
 const NUM_OF_OUTUT_BITS: &'static str = "output.noob.txt";
@@ -28,21 +29,21 @@ impl<'a> Parser<'a> {
         Parser { path: path }
     }
 
-    pub fn parse_number_of_gates(&self) -> Result<usize, Error> {
+    pub fn parse_number_of_gates(&self) -> Result<usize, io::Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(NUM_OF_GATES));
 
         let mut buf = String::new();
-        let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
+        let mut reader = io::BufReader::new(try!(File::open(pathbuf.as_path())));
         try!(reader.read_line(&mut buf));
         match buf.trim().parse::<usize>() {
             Ok(val) => Ok(val),
-            Err(why) => Err(Error::new(InvalidData, why)),
+            Err(why) => Err(io::Error::new(ErrorKind::InvalidData, why)),
         }
     }
 
-    pub fn parse_number_of_output_bits(&self) -> Result<usize, Error> {
+    pub fn parse_number_of_output_bits(&self) -> Result<usize, io::Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(NUM_OF_OUTUT_BITS));
@@ -52,11 +53,11 @@ impl<'a> Parser<'a> {
         try!(reader.read_line(&mut buf));
         match buf.trim().parse::<usize>() {
             Ok(val) => Ok(val),
-            Err(why) => Err(Error::new(InvalidData, why)),
+            Err(why) => Err(io::Error::new(ErrorKind::InvalidData, why)),
         }
     }
 
-    pub fn parse_gates(&mut self) -> Result<Vec<Gate>, Error> {
+    pub fn parse_gates(&mut self) -> Result<Vec<gate::Gate>, io::Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(GATES));
@@ -64,7 +65,7 @@ impl<'a> Parser<'a> {
         _parse_gates(reader.lines())
     }
 
-    pub fn parse_input_gates(&mut self) -> Result<Vec<Gate>, Error> {
+    pub fn parse_input_gates(&mut self) -> Result<Vec<gate::Gate>, io::Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(INPUT_GATES));
@@ -72,25 +73,25 @@ impl<'a> Parser<'a> {
         _parse_input_gates(reader.lines())
     }
 
-    pub fn create_circuit(&mut self) -> Result<Circuit, Error> {
+    pub fn create_circuit(&mut self) -> Result<circuit::Circuit, io::Error> {
         let mut num_of_out = try!(self.parse_number_of_output_bits());
         let mut output_gates = Vec::new();
         let mut id = -1;
         while num_of_out > 0 {
-            output_gates.push(Gate::new(1, GateType::Output, id));
+            output_gates.push(gate::Gate::new(1, GateType::Output, id));
             id -= 1;
             num_of_out -= 1;
         }
 
-        Ok(Circuit::new(try!(self.parse_input_gates()),
-                        try!(self.parse_gates()),
-                        output_gates))
+        Ok(circuit::Circuit::new(try!(self.parse_input_gates()),
+                                 try!(self.parse_gates()),
+                                 output_gates))
     }
 }
 
 
-fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
-    where I: Iterator<Item = Result<String, Error>>
+fn _parse_input_gates<I>(from: I) -> Result<Vec<gate::Gate>, io::Error>
+    where I: Iterator<Item = Result<String, io::Error>>
 {
     let mut gates = Vec::with_capacity(50); // avoid the first reallocs
     let mut line_nr: i64 = 0;
@@ -98,48 +99,25 @@ fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
         let line = try!(line);
         let tokens: Vec<&str> = line.trim().split_whitespace().collect();
 
-        if tokens.len() < 1 {
-            return Err(Error::new(InvalidData, format!("line {}: no token found", line_nr)));
-        }
-        if !tokens[0].trim().starts_with("InWire:#") {
-            return Err(Error::new(InvalidData,
-                                  format!("line {}: expected: InWire# - found: {}",
-                                          line_nr,
-                                          tokens[0])));
-        }
+        try!(check_if(tokens.len() >= 1, line_nr, format!("no token found")));
+        try!(check_if(tokens[0].trim().starts_with("InWire:#"),
+                      line_nr,
+                      format!("expected: InWire# - found: {}", tokens[0])));
         // TODO: check whether a number comes after 'InWire:#'
 
-        let mut gate = Gate::new(1, GateType::Input, line_nr);
+        let mut gate = gate::Gate::new(1, GateType::Input, line_nr);
 
         for token in tokens.iter().skip(1) {
             let w: Vec<&str> = token.trim().split(":").collect();
-            if w.len() != 3 {
-                return Err(Error::new(InvalidData,
-                                      format!("line {}: expected: <pin>::<gate_id>::<pin> - \
-                                               found: {}",
-                                              line_nr,
-                                              token)));
-            }
+            try!(check_if(w.len() == 3,
+                          line_nr,
+                          format!("expected: <pin>::<gate_id>::<pin> - found: {}", token)));
 
-            let src = match w[0].parse::<u8>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val,
-            };
-            let id = match w[1].parse::<i64>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val - 1, // the compiler ids starts at 1, but we start at 0
-            };
-            let dst = match w[2].parse::<u8>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val,
-            };
-            gate.connect(Wire::new(src, dst, id));
+            let src = try!(check_error(w[0].trim().parse::<u8>(), line_nr));
+            let id = try!(check_error(w[1].trim().parse::<i64>(), line_nr)) - 1; // the compiler ids starts at 1, but we start at 0
+            let dst = try!(check_error(w[2].trim().parse::<u8>(), line_nr));
+
+            gate.connect(wire::Wire::new(src, dst, id));
         }
 
         gates.push(gate);
@@ -150,8 +128,8 @@ fn _parse_input_gates<I>(from: I) -> Result<Vec<Gate>, Error>
     Ok(gates)
 }
 
-fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
-    where I: Iterator<Item = Result<String, Error>>
+fn _parse_gates<I>(from: I) -> Result<Vec<gate::Gate>, io::Error>
+    where I: Iterator<Item = Result<String, io::Error>>
 {
     let mut gates = Vec::with_capacity(500); // avoid the first reallocs
     let mut line_nr: i64 = 0;
@@ -159,13 +137,10 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
         let line = try!(line);
         let tokens: Vec<&str> = line.split_whitespace().collect();
 
-        if tokens.len() < 3 {
-            return Err(Error::new(InvalidData,
-                                  format!("line {}: expected at least 3 tokens - found {} \
-                                           tokens",
-                                          line_nr,
-                                          tokens.len())));
-        }
+        try!(check_if(tokens.len() >= 3,
+                      line_nr,
+                      format!("expected at least 3 tokens - found: {} tokens",
+                              tokens.len())));
 
         let gate_type = match tokens[0].trim() {
             "AND" => GateType::And,
@@ -173,48 +148,29 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
             "OR" => GateType::Or,
             "NOT" => GateType::Not,
             _ => {
-                return Err(Error::new(InvalidData,
-                                      format!("line {}: unknown gate type {}", line_nr, tokens[0])))
+                return Err(io::Error::new(ErrorKind::InvalidData,
+                                          format!("line {}: unknown gate type {}",
+                                                  line_nr,
+                                                  tokens[0])))
             }
         };
 
-        let num_pins = match tokens[1].trim().parse::<u8>() {
-            Err(why) => return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why))),
-            Ok(val) => val,
-        };
 
-        let mut gate = Gate::new(num_pins, gate_type, line_nr);
 
+        let num_pins = try!(check_error(tokens[1].trim().parse::<u8>(), line_nr));
+
+        let mut gate = gate::Gate::new(num_pins, gate_type, line_nr);
         for token in tokens.iter().skip(2) {
             let w: Vec<&str> = token.trim().split(":").collect();
-            if w.len() != 3 {
-                return Err(Error::new(InvalidData,
-                                      format!("line {}: expected: <pin>::<gate_id>::<pin> - \
-                                               found: {}",
-                                              line_nr,
-                                              token)));
-            }
+            try!(check_if(w.len() == 3,
+                          line_nr,
+                          format!("expected: <pin>::<gate_id>::<pin> - found: {}", token)));
 
-            let src = match w[0].trim().parse::<u8>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val,
-            };
-            let id = match w[1].trim().parse::<i64>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val - 1, // the compiler ids starts at 1, but we start at 0
-            };
-            let dst = match w[2].trim().parse::<u8>() {
-                Err(why) => {
-                    return Err(Error::new(InvalidData, format!("line {}: {}", line_nr, why)))
-                }
-                Ok(val) => val,
-            };
+            let src = try!(check_error(w[0].trim().parse::<u8>(), line_nr));
+            let id = try!(check_error(w[1].trim().parse::<i64>(), line_nr)) - 1; // the compiler ids starts at 1, but we start at 0
+            let dst = try!(check_error(w[2].trim().parse::<u8>(), line_nr));
 
-            gate.connect(Wire::new(src, dst, id));
+            gate.connect(wire::Wire::new(src, dst, id));
         }
         gates.push(gate);
 
@@ -222,4 +178,23 @@ fn _parse_gates<I>(from: I) -> Result<Vec<Gate>, Error>
     }
 
     return Ok(gates);
+}
+
+fn check_if(cond: bool, line_nr: i64, err_msg: String) -> Result<bool, io::Error> {
+    match cond {
+        false => {
+            Err(io::Error::new(ErrorKind::InvalidData,
+                               format!("line {}: {}", line_nr, err_msg)))
+        }
+        _ => Ok(cond),
+    }
+}
+
+fn check_error<T, E: fmt::Display>(result: Result<T, E>, line_nr: i64) -> Result<T, io::Error> {
+    match result {
+        Err(why) => {
+            Err(io::Error::new(ErrorKind::InvalidData, format!("line {}: {}", line_nr, why)))
+        }
+        Ok(val) => Ok(val),
+    }
 }

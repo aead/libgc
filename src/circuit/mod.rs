@@ -1,18 +1,16 @@
 
 use std::fmt;
-use std::fmt::Display;
+use super::parser::gate;
 
 use std::vec::Vec;
 
-use super::parser::gate::Gate;
-
 pub struct Circuit {
-    input_gates: Vec<Gate>,
-    gates: Vec<Gate>,
-    output_gates: Vec<Gate>,
+    input_gates: Vec<gate::Gate>,
+    gates: Vec<gate::Gate>,
+    output_gates: Vec<gate::Gate>,
 }
 
-impl Display for Circuit {
+impl fmt::Display for Circuit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for gate in self.gates.as_slice() {
             try!(writeln!(f, "{}", gate));
@@ -22,7 +20,10 @@ impl Display for Circuit {
 }
 
 impl Circuit {
-    pub fn new(input_gates: Vec<Gate>, gates: Vec<Gate>, output_gates: Vec<Gate>) -> Circuit {
+    pub fn new(input_gates: Vec<gate::Gate>,
+               gates: Vec<gate::Gate>,
+               output_gates: Vec<gate::Gate>)
+               -> Circuit {
         Circuit {
             input_gates: input_gates,
             gates: gates,
@@ -32,7 +33,7 @@ impl Circuit {
 
     pub fn sort(&mut self) {
         let mut nodes = new_nodes(&(self.gates));
-        let mut top_gates: Vec<Gate> = Vec::with_capacity(self.gates.len());
+        let mut top_gates: Vec<gate::Gate> = Vec::with_capacity(self.gates.len());
         let mut marked = Vec::new();
         loop {
             let done = mark_nodes(&mut marked, &mut nodes);
@@ -68,21 +69,22 @@ fn mark_nodes(marked: &mut Vec<usize>, nodes: &mut Vec<i64>) -> bool {
 
 fn sweep_nodes(marked: &mut Vec<usize>,
                nodes: &mut Vec<i64>,
-               from: &mut Vec<Gate>,
-               to: &mut Vec<Gate>) {
+               from: &mut Vec<gate::Gate>,
+               to: &mut Vec<gate::Gate>) {
     for node in marked {
-        let ref gate = from[*node];
+        let ref mut gate = from[*node];
         for wire in gate.wires() {
             if !wire.is_output() {
                 nodes[wire.dst_gate() as usize] -= 1;
             }
         }
         to.push(gate.copy());
+        gate.disconnect_all();
         nodes[*node] = -1;
     }
 }
 
-fn new_nodes(gates: &Vec<Gate>) -> Vec<i64> {
+fn new_nodes(gates: &Vec<gate::Gate>) -> Vec<i64> {
     let mut nodes: Vec<i64> = Vec::with_capacity(gates.len());
     unsafe { nodes.set_len(gates.len()) };
 

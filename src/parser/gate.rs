@@ -1,13 +1,13 @@
 
-use std::fmt::{Display, Formatter, Result};
-use super::wire::Wire;
+use std::fmt;
+use super::wire;
 
 #[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct Gate {
     pins: u8,
     gate_type: GateType,
     id: i64,
-    wires: Vec<Wire>,
+    wires: Vec<wire::Wire>,
 }
 
 
@@ -33,12 +33,16 @@ impl Gate {
         self.id
     }
 
-    pub fn wires(&self) -> &[Wire] {
+    pub fn wires(&self) -> &[wire::Wire] {
         self.wires.as_slice()
     }
 
-    pub fn connect(&mut self, wire: Wire) {
+    pub fn connect(&mut self, wire: wire::Wire) {
         self.wires.push(wire);
+    }
+
+    pub fn disconnect_all(&mut self) {
+        self.wires.clear();
     }
 
     pub fn copy(&self) -> Gate {
@@ -53,8 +57,8 @@ impl Gate {
     }
 }
 
-impl Display for Gate {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for Gate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{} {} {}", self.id, self.gate_type, self.pins));
         if self.wires.len() > 0 {
             try!(write!(f, " -> "));
@@ -76,8 +80,8 @@ pub enum GateType {
     Not,
 }
 
-impl Display for GateType {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for GateType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
                "{}",
                match *self {

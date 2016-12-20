@@ -1,5 +1,5 @@
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt;
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct Wire {
@@ -34,8 +34,8 @@ impl Wire {
     }
 }
 
-impl Display for Wire {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for Wire {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}:{}", self.src_pin, self.dst_id, self.dst_pin)
     }
 }
