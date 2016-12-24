@@ -1,15 +1,18 @@
 
+use super::gate::{Pin, ID};
+use super::error::Error;
+
 use std::fmt;
 
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Wire {
-    src_pin: u8,
-    dst_pin: u8,
-    dst_id: i64,
+    src_pin: Pin,
+    dst_pin: Pin,
+    dst_id: ID,
 }
 
 impl Wire {
-    pub fn new(src_pin: u8, dst_pin: u8, dst_id: i64) -> Wire {
+    pub fn new(src_pin: Pin, dst_pin: Pin, dst_id: ID) -> Wire {
         Wire {
             src_pin: src_pin,
             dst_pin: dst_pin,
@@ -17,20 +20,35 @@ impl Wire {
         }
     }
 
-    pub fn src_pin(&self) -> u8 {
+    #[inline]
+    pub fn src_pin(&self) -> Pin {
         self.src_pin
     }
 
-    pub fn dst_pin(&self) -> u8 {
+    #[inline]
+    pub fn dst_pin(&self) -> Pin {
         self.dst_pin
     }
 
-    pub fn dst_gate(&self) -> i64 {
+    #[inline]
+    pub fn dst_gate(&self) -> ID {
         self.dst_id
     }
 
-    pub fn is_output(self) -> bool {
-        self.dst_id < 0
+    #[inline]
+    pub fn is_output(&self) -> bool {
+        match self.dst_id {
+            ID::Output(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    pub fn is_input(&self) -> bool {
+        match self.dst_id {
+            ID::Input(_) => true,
+            _ => false,
+        }
     }
 }
 

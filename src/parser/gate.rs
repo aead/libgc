@@ -1,53 +1,140 @@
 
-use std::fmt;
-use super::wire;
+use super::wire::Wire;
 
-#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct Gate {
-    pins: u8,
-    gate_type: GateType,
-    id: i64,
-    wires: Vec<wire::Wire>,
+use std::fmt::{Display, Formatter, Result};
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum Pin {
+    Left,
+    Right,
 }
 
+impl Display for Pin {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match *self {
+            Pin::Left => write!(f, "0"),
+            Pin::Right => write!(f, "1"),
+        }
+    }
+}
 
-impl Gate {
-    pub fn new(n_pins: u8, gate_type: GateType, gate_id: i64) -> Gate {
-        Gate {
-            pins: n_pins,
-            gate_type: gate_type,
-            id: gate_id,
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct IOPin {
+    id: ID,
+    wires: Vec<Wire>,
+}
+
+impl IOPin {
+    pub fn new(id: ID) -> IOPin {
+        IOPin {
+            id: id,
             wires: Vec::new(),
         }
     }
 
-    pub fn pins(&self) -> u8 {
-        self.pins
+    #[inline]
+    pub fn connect(&mut self, wire: Wire) {
+        self.wires.push(wire);
+    }
+}
+
+impl Display for IOPin {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        try!(write!(f, "InWire#{}", self.id));
+        if self.wires.len() > 0 {
+            try!(write!(f, " "));
+            for wire in &self.wires {
+                try!(write!(f, "{}", wire));
+            }
+        }
+        write!(f, "")
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ID {
+    Input(u64),
+    Output(u64),
+    Gate(u64),
+}
+
+impl ID {
+    #[inline]
+    pub fn u64(&self) -> u64 {
+        match *self {
+            ID::Input(id) => id,
+            ID::Output(id) => id,
+            ID::Gate(id) => id,
+        }
     }
 
+    #[inline]
+    pub fn index(&self) -> usize {
+        match *self {
+            ID::Input(id) => (id - 1) as usize,
+            ID::Output(id) => (id - 1) as usize,
+            ID::Gate(id) => (id - 1) as usize,
+        }
+    }
+}
+
+impl Display for ID {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match *self {
+            ID::Input(id) => write!(f, "{}", id),
+            ID::Output(id) => write!(f, "-{}", id),
+            ID::Gate(id) => write!(f, "{}", id),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Gate {
+    gate_type: GateType,
+    id: ID,
+    wires: Vec<Wire>,
+}
+
+impl Gate {
+    #[inline]
+    pub fn new(gate_type: GateType, id: ID) -> Gate {
+        Gate {
+            gate_type: gate_type,
+            id: id,
+            wires: Vec::new(),
+        }
+    }
+
+    #[inline]
     pub fn gate_type(&self) -> GateType {
         self.gate_type
     }
 
-    pub fn id(&self) -> i64 {
+    #[inline]
+    pub fn id(&self) -> ID {
         self.id
     }
 
-    pub fn wires(&self) -> &[wire::Wire] {
+    #[inline]
+    pub fn wires(&self) -> &[Wire] {
         self.wires.as_slice()
     }
 
-    pub fn connect(&mut self, wire: wire::Wire) {
+    #[inline]
+    pub fn connect(&mut self, wire: Wire) {
         self.wires.push(wire);
     }
 
+    #[inline]
     pub fn disconnect_all(&mut self) {
         self.wires.clear();
     }
 
+    #[inline]
     pub fn copy(&self) -> Gate {
         let mut gate = Gate {
-            pins: self.pins,
             gate_type: self.gate_type,
             id: self.id,
             wires: Vec::with_capacity(self.wires.len()),
@@ -57,9 +144,9 @@ impl Gate {
     }
 }
 
-impl fmt::Display for Gate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{} {} {}", self.id, self.gate_type, self.pins));
+impl Display for Gate {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        try!(write!(f, "{} {}", self.id, self.gate_type));
         if self.wires.len() > 0 {
             try!(write!(f, " -> "));
             for wire in &self.wires {
@@ -70,27 +157,32 @@ impl fmt::Display for Gate {
     }
 }
 
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum GateType {
-    Input,
-    Output,
     And,
     Xor,
     Or,
     Not,
 }
 
-impl fmt::Display for GateType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "{}",
-               match *self {
-                   GateType::Input => "Input",
-                   GateType::Output => "Output",
-                   GateType::And => "AND",
-                   GateType::Xor => "XOR",
-                   GateType::Or => "OR",
-                   GateType::Not => "NOT",
-               })
+impl GateType {
+    #[inline]
+    pub fn pins(&self) -> u8 {
+        match *self {
+            GateType::Not => 1,
+            _ => 2,
+        }
+    }
+}
+
+impl Display for GateType {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        let repr = match *self {
+            GateType::And => "AND",
+            GateType::Xor => "XOR",
+            GateType::Or => "OR",
+            GateType::Not => "NOT",
+        };
+        write!(f, "{}", repr)
     }
 }
