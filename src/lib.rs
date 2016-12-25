@@ -31,13 +31,9 @@ mod tests {
             }
         };
 
-        let mut circuit = circuit::Circuit::new(inputs, gates, Vec::new());
+        let mut circuit = circuit::Circuit::new(inputs, gates);
         circuit.sort();
         println!("{}", circuit);
-
-        for pin in p.parse_inputs().unwrap() {
-            println!("{}", pin);
-        }
 
         // let mut f = File::create("/home/andreas/Desktop/loops1_top.txt").unwrap();
         // write!(f, "{}", circuit)

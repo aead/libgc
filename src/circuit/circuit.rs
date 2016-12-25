@@ -1,5 +1,5 @@
 
-use super::super::parser::{Gate, IOPin};
+use super::super::parser::{Gate, IOPin, ID, Wire};
 
 use std::fmt;
 
@@ -11,19 +11,27 @@ pub struct Circuit {
 
 impl fmt::Display for Circuit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for gate in self.gates.as_slice() {
+        for pin in &self.inputs {
+            try!(writeln!(f, "{}", pin));
+        }
+
+        for gate in &self.gates {
             try!(writeln!(f, "{}", gate));
+        }
+
+        for pin in &self.outputs {
+            try!(writeln!(f, "{}", pin));
         }
         write!(f, "")
     }
 }
 
 impl Circuit {
-    pub fn new(inputs: Vec<IOPin>, gates: Vec<Gate>, outputs: Vec<IOPin>) -> Circuit {
+    pub fn new(inputs: Vec<IOPin>, gates: Vec<Gate>) -> Circuit {
         Circuit {
             inputs: inputs,
+            outputs: count_outputs(&gates),
             gates: gates,
-            outputs: outputs,
         }
     }
 
@@ -47,6 +55,27 @@ impl Circuit {
 
         self.gates = top_gates;
     }
+}
+
+fn count_outputs(gates: &Vec<Gate>) -> Vec<IOPin>{
+    let mut max: u64 = 0;
+    for gate in gates {
+        for wire in gate.wires(){
+            if wire.is_output(){
+                let dst_id = wire.dst_gate().u64();
+                if max < dst_id {
+                    max = dst_id;
+                }
+            }
+        }
+    }
+    let mut outputs = Vec::with_capacity(max as usize);
+    let mut i: u64 = 0;
+    while i < max {
+        outputs.push(IOPin::new(ID::Output(i)));
+        i += 1;
+    }
+    outputs
 }
 
 fn mark_nodes(marked: &mut Vec<usize>, nodes: &mut Vec<i64>) -> bool {

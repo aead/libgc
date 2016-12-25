@@ -1,6 +1,7 @@
 
 use super::wire::Wire;
 
+use std::fmt;
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -42,12 +43,18 @@ impl IOPin {
 impl Display for IOPin {
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> Result {
-        try!(write!(f, "InWire#{}", self.id));
-        if self.wires.len() > 0 {
-            try!(write!(f, " "));
-            for wire in &self.wires {
-                try!(write!(f, "{}", wire));
-            }
+        match self.id {
+            ID::Input(id) => {
+                try!(write!(f, "InWire#{}", id));
+                if self.wires.len() > 0 {
+                    try!(write!(f, " "));
+                    for wire in &self.wires {
+                        try!(write!(f, "{}", wire));
+                    }
+                }
+            },
+            ID::Output(id) => try!(write!(f, "-{}", id)),
+            _ => (),
         }
         write!(f, "")
     }
