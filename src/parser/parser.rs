@@ -156,7 +156,7 @@ fn parse_gate(line: u64, expr: String) -> Result<Gate, Error> {
         Ok(ID::Output((-1 * x) as u64))
     };
 
-    let mut gate = Gate::new(gate_type, ID::Gate(line));
+    let mut gate = Gate::new(gate_type, line);
     for wire_expr in tokens.iter().skip(2) {
         gate.connect(try!(parse_wire(line, wire_expr, &to_id)));
     }
@@ -203,7 +203,7 @@ fn parse_input(line: u64, expr: String) -> Result<IOPin, Error> {
         Err(Error::new(line, format!("error: '{}' is not a valid 'dst_id'", x)))
     };
 
-    let mut io_pin = IOPin::new(ID::Input(pin_id as u64));
+    let mut io_pin = IOPin::new_input(pin_id as u64);
     for wire_expr in tokens.iter().skip(1) {
         let wire = try!(parse_wire(line, wire_expr, &to_id));
         if wire.src_pin() == Pin::Right {

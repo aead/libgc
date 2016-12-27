@@ -2,6 +2,7 @@
 use super::wire::Wire;
 
 use std::fmt;
+use std::cmp;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Pin {
@@ -26,9 +27,16 @@ pub struct IOPin {
 }
 
 impl IOPin {
-    pub fn new(id: ID) -> IOPin {
+    pub fn new_input(id: u64) -> IOPin {
         IOPin {
-            id: id,
+            id: ID::Input(id),
+            wires: Vec::new(),
+        }
+    }
+
+    pub fn new_output(id: u64) -> IOPin {
+        IOPin {
+            id: ID::Output(id),
             wires: Vec::new(),
         }
     }
@@ -96,16 +104,23 @@ impl fmt::Display for ID {
     }
 }
 
+impl cmp::PartialEq<u64> for ID {
+    fn eq(&self, other: &u64) -> bool {
+        self.u64() == *other
+    }
+}
+    
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Gate {
     gate_type: GateType,
-    id: ID,
+    id: u64,
     wires: Vec<Wire>,
 }
 
 impl Gate {
     #[inline]
-    pub fn new(gate_type: GateType, id: ID) -> Gate {
+    pub fn new(gate_type: GateType, id: u64) -> Gate {
         Gate {
             gate_type: gate_type,
             id: id,
@@ -120,7 +135,7 @@ impl Gate {
 
     #[inline]
     pub fn id(&self) -> ID {
-        self.id
+        ID::Gate(self.id)
     }
 
     #[inline]

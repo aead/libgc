@@ -1,5 +1,5 @@
 
-use super::super::parser::{Gate, IOPin, ID};
+use super::super::parser::{Gate, IOPin};
 
 use std::fmt;
 
@@ -72,7 +72,7 @@ fn count_outputs(gates: &Vec<Gate>) -> Vec<IOPin>{
     let mut outputs = Vec::with_capacity(max as usize);
     let mut i: u64 = 0;
     while i < max {
-        outputs.push(IOPin::new(ID::Output(i)));
+        outputs.push(IOPin::new_output(i));
         i += 1;
     }
     outputs
