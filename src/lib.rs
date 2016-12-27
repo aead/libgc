@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn example() {
-        let mut p = parser::Parser::new(Path::new("/home/andreas/Desktop/sum"));
+        let p = parser::Parser::new(Path::new("/home/andreas/Desktop/sum"));
 
         let gates = match p.parse_gates() {
             Ok(val) => val,

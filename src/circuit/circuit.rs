@@ -1,5 +1,5 @@
 
-use super::super::parser::{Gate, IOPin, ID, Wire};
+use super::super::parser::{Gate, IOPin, ID};
 
 use std::fmt;
 

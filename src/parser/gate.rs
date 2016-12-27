@@ -2,7 +2,6 @@
 use super::wire::Wire;
 
 use std::fmt;
-use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Pin {
@@ -10,9 +9,9 @@ pub enum Pin {
     Right,
 }
 
-impl Display for Pin {
+impl fmt::Display for Pin {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Pin::Left => write!(f, "0"),
             Pin::Right => write!(f, "1"),
@@ -40,9 +39,9 @@ impl IOPin {
     }
 }
 
-impl Display for IOPin {
+impl fmt::Display for IOPin {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.id {
             ID::Input(id) => {
                 try!(write!(f, "InWire#{}", id));
@@ -87,8 +86,8 @@ impl ID {
     }
 }
 
-impl Display for ID {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for ID {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ID::Input(id) => write!(f, "{}", id),
             ID::Output(id) => write!(f, "-{}", id),
@@ -151,8 +150,8 @@ impl Gate {
     }
 }
 
-impl Display for Gate {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for Gate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{} {}", self.id, self.gate_type));
         if self.wires.len() > 0 {
             try!(write!(f, " -> "));
@@ -182,8 +181,8 @@ impl GateType {
     }
 }
 
-impl Display for GateType {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+impl fmt::Display for GateType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let repr = match *self {
             GateType::And => "AND",
             GateType::Xor => "XOR",

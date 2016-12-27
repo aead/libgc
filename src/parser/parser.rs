@@ -4,13 +4,10 @@ use super::wire::Wire;
 use super::gate::{Gate, GateType, ID, Pin, IOPin};
 
 use std::fmt;
-use std::io;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::fs::File;
 
-const NUM_OF_GATES: &'static str = "output.numberofgates.txt";
-const NUM_OF_OUTUT_BITS: &'static str = "output.noob.txt";
 const GATES: &'static str = "output.gate.txt";
 const INPUTS: &'static str = "output.inputs.txt";
 

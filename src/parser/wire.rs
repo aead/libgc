@@ -1,6 +1,5 @@
 
 use super::gate::{Pin, ID};
-use super::error::Error;
 
 use std::fmt;
 
