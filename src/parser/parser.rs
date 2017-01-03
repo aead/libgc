@@ -21,47 +21,31 @@ impl<'a> Parser<'a> {
         Parser { path: path }
     }
 
-    pub fn parse_gates(& self) -> Result<Vec<Gate>, Error> {
+    pub fn parse_gates(&self) -> Result<Vec<Gate>, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(GATES));
-        let reader = BufReader::new(try!(match File::open(pathbuf.as_path()) {
-            Ok(val) => Ok(val),
-            Err(why) => Err(Error::new(0, format!("error: {}", why))),
-        }));
+        let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
 
         let mut gates = Vec::with_capacity(500); // avoid the first reallocs
         let mut line_nr: u64 = 0;
         for line in reader.lines() {
-            let line = try!(match line {
-                Ok(val) => Ok(val),
-                Err(why) => Err(Error::new(line_nr, format!("error: {}", why))),
-            });
-
-            gates.push(try!(parse_gate(line_nr, line)));
+            gates.push(try!(parse_gate(line_nr, try!(line))));
             line_nr += 1
         }
         Ok(gates)
     }
 
-    pub fn parse_inputs(& self) -> Result<Vec<IOPin>, Error> {
+    pub fn parse_inputs(&self) -> Result<Vec<IOPin>, Error> {
         let mut pathbuf = PathBuf::new();
         pathbuf.push(self.path);
         pathbuf.push(Path::new(INPUTS));
-        let reader = BufReader::new(try!(match File::open(pathbuf.as_path()) {
-            Ok(val) => Ok(val),
-            Err(why) => Err(Error::new(0, format!("error: {}", why))),
-        }));
+        let reader = BufReader::new(try!(File::open(pathbuf.as_path())));
 
         let mut pins = Vec::with_capacity(50); // avoid the first reallocs
         let mut line_nr: u64 = 0;
         for line in reader.lines() {
-            let line = try!(match line {
-                Ok(val) => Ok(val),
-                Err(why) => Err(Error::new(line_nr, format!("error: {}", why))),
-            });
-
-            pins.push(try!(parse_input(line_nr, line)));
+            pins.push(try!(parse_input(line_nr, try!(line))));
             line_nr += 1
         }
         Ok(pins)
@@ -69,49 +53,57 @@ impl<'a> Parser<'a> {
 }
 
 #[inline]
-fn check<T, E: fmt::Display>(expr: Result<T, E>, line: u64, msg: String) -> Result<T, Error> {
+fn parse_err<R, T: fmt::Display>(line: u64, found: T, expected: &'static str) -> Result<R, Error> {
+    Err(Error::new(line, format!("{} {}", found, expected)))
+}
+
+#[inline]
+fn check<T, E, F>(expr: Result<T, E>,
+                  line: u64,
+                  found: F,
+                  expected: &'static str)
+                  -> Result<T, Error>
+    where E: fmt::Display,
+          F: fmt::Display
+{
     match expr {
         Ok(val) => Ok(val),
-        Err(_) => Err(Error::new(line, msg)),
+        Err(_) => parse_err(line, found, expected),
     }
 }
 
-fn parse_wire<F1: Fn(i64) -> Result<ID, Error>>(line: u64,
-                                                expr: &str,
-                                                to_id: F1)
-                                                -> Result<Wire, Error> {
+fn parse_wire<F>(line: u64, expr: &str, to_id: F) -> Result<Wire, Error>
+    where F: Fn(i64) -> Result<ID, Error>
+{
     let tokens: Vec<&str> = expr.trim().split(":").collect();
     if tokens.len() != 3 {
-        return Err(Error::new(line,
-                              format!("error: '{}' doesn't match 'src_pin':'dst_id':'dst_pin'",
-                                      expr)));
+        return parse_err(line, expr, "doesn't match 'src_pin':'dst_id':'dst_pin'");
     }
 
     let src_pin = try!(check(tokens[0].trim().parse::<u8>(),
                              line,
-                             format!("error: '{}' is not a valid pin number", tokens[0])));
+                             tokens[0].trim(),
+                             "is not a valid pin number"));
+
     let dst_id = try!(check(tokens[1].trim().parse::<i64>(),
                             line,
-                            format!("error: '{}' is not a valid gate id", tokens[1])));
+                            tokens[1].trim(),
+                            "is not a valid gate id"));
+
     let dst_pin = try!(check(tokens[2].trim().parse::<u8>(),
                              line,
-                             format!("error: '{}' is not a valid pin number", tokens[2])));
+                             tokens[2].trim(),
+                             "is not a valid pin number"));
 
     let src_pin = try!(match src_pin {
         0 => Ok(Pin::Left),
         1 => Ok(Pin::Right),
-        _ => {
-            Err(Error::new(line,
-                           format!("error: invalid src pin '{}' - expect '0' or '1'", src_pin)))
-        }
+        _ => parse_err(line, src_pin, "is an invalid src pin - expected '0' or '1'"),
     });
     let dst_pin = try!(match dst_pin {
         0 => Ok(Pin::Left), 
         1 => Ok(Pin::Right),
-        _ => {
-            Err(Error::new(line,
-                           format!("error: invalid dst pin '{}' - expect '0' or '1'", dst_pin)))
-        }
+        _ => parse_err(line, dst_pin, "is an invalid dst pin - expected '0' or '1'"),
     });
 
     Ok(Wire::new(src_pin, dst_pin, try!(to_id(dst_id))))
@@ -120,10 +112,9 @@ fn parse_wire<F1: Fn(i64) -> Result<ID, Error>>(line: u64,
 fn parse_gate(line: u64, expr: String) -> Result<Gate, Error> {
     let tokens: Vec<&str> = expr.split_whitespace().collect();
     if tokens.len() < 3 {
-        return Err(Error::new(line,
-                              format!("error: '{}' doesn't match \
-                                       'gate_type':'pin_number':'[src_pin:dst_id:dst_pin]'",
-                                      expr)));
+        return parse_err(line,
+                         &expr,
+                         "doesn't match 'gate_type':'pin_number':'[src_pin:dst_id:dst_pin]'");
     }
 
     let gate_type = try!(match tokens[0].trim() {
@@ -131,16 +122,13 @@ fn parse_gate(line: u64, expr: String) -> Result<Gate, Error> {
         "XOR" => Ok(GateType::Xor),
         "OR" => Ok(GateType::Or),
         "NOT" => Ok(GateType::Not),
-        _ => {
-            Err(Error::new(line,
-                           format!("error: Unknown gate type: '{}'", tokens[0].trim())))
-        }
+        _ => parse_err(line, tokens[0].trim(), "is an unknown gate type"),
     });
 
     let pin_num = try!(check(tokens[1].trim().parse::<u8>(),
                              line,
-                             format!("error: Type mismatch: '{}' is not a number",
-                                     tokens[1].trim())));
+                             tokens[1].trim(),
+                             "is not a number"));
 
     if gate_type.pins() != pin_num {
         return Err(Error::new(line,
@@ -166,50 +154,41 @@ fn parse_gate(line: u64, expr: String) -> Result<Gate, Error> {
 fn parse_input(line: u64, expr: String) -> Result<IOPin, Error> {
     let tokens: Vec<&str> = expr.split_whitespace().collect();
     if tokens.len() < 2 {
-        return Err(Error::new(line,
-                              format!("error: '{}' doesn't match \
-                                       'InWire:#_':'[src_pin:dst_id:dst_pin]'",
-                                      expr)));
+        return parse_err(line,
+                         &expr,
+                         "doesn't match 'InWire:#_':'[src_pin:dst_id:dst_pin]'");
     }
 
     let io_pin: Vec<&str> = tokens[0].split("#").collect();
     if io_pin.len() != 2 {
-        return Err(Error::new(line,
-                              format!("error: '{}' doesn't match \
-                                       'InWire:#'number''",
-                                      tokens[0])));
+        return parse_err(line, tokens[0], "doesn't match 'InWire:#'number''");
     }
 
     if io_pin[0] != "InWire:" {
-        return Err(Error::new(line,
-                              format!("error: '{}' doesn't match \
-                                       'InWire'",
-                                      io_pin[0])));
+        return parse_err(line, io_pin[0], "doesn't match 'InWire'");
 
     }
 
     let pin_id = try!(check(io_pin[1].trim().parse::<i64>(),
                             line,
-                            format!("error: '{}' is not a valid IO pin id", io_pin[1])));
+                            io_pin[1].trim(),
+                            "is not a valid IO pin id"));
 
     if pin_id < 0 {
-        return Err(Error::new(line,
-                              format!("error: '{}' is not a valid IO pin id", io_pin[1])));
+        return parse_err(line, io_pin[1], "is not a valid IO pin id");
     }
 
     let to_id = |x| if x >= 0 {
         Ok(ID::Input(x as u64))
     } else {
-        Err(Error::new(line, format!("error: '{}' is not a valid 'dst_id'", x)))
+        parse_err(line, x, "is not a valid 'dst_id'")
     };
 
     let mut io_pin = IOPin::new_input(pin_id as u64);
     for wire_expr in tokens.iter().skip(1) {
         let wire = try!(parse_wire(line, wire_expr, &to_id));
         if wire.src_pin() == Pin::Right {
-            return Err(Error::new(line,
-                                  format!("error: invalid src pin '{}' - expect '0'",
-                                          wire.src_pin())));
+            return parse_err(line, wire.src_pin(), "invalid src pin '{}' - expect '0'");
         }
         io_pin.connect(wire);
     }
