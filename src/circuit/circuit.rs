@@ -1,5 +1,5 @@
 
-use super::super::parser::{Gate, IOPin};
+use super::super::parser::{Gate, IOPin, One};
 
 use std::fmt;
 
@@ -7,10 +7,14 @@ pub struct Circuit {
     inputs: Vec<IOPin>,
     gates: Vec<Gate>,
     outputs: Vec<IOPin>,
+    constants: Option<One>,
 }
 
 impl fmt::Display for Circuit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.constants.is_some() {
+            try!(writeln!(f, "{}", self.constants.as_ref().unwrap()));
+        }
         for pin in &self.inputs {
             try!(writeln!(f, "{}", pin));
         }
@@ -27,11 +31,12 @@ impl fmt::Display for Circuit {
 }
 
 impl Circuit {
-    pub fn new(inputs: Vec<IOPin>, gates: Vec<Gate>) -> Circuit {
+    pub fn new(inputs: Vec<IOPin>, gates: Vec<Gate>, consts: Option<One>) -> Circuit {
         Circuit {
             inputs: inputs,
             outputs: count_outputs(&gates),
             gates: gates,
+            constants: consts,
         }
     }
 

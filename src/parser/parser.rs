@@ -1,7 +1,7 @@
 
 use super::error::Error;
 use super::wire::Wire;
-use super::gate::{Gate, GateType, ID, Pin, IOPin};
+use super::gate::{Gate, GateType, ID, Pin, IOPin, One};
 
 use std::fmt;
 use std::io::{BufReader, BufRead};
@@ -10,6 +10,7 @@ use std::fs::File;
 
 const GATES: &'static str = "output.gate.txt";
 const INPUTS: &'static str = "output.inputs.txt";
+const CONSTS: &'static str = "output.constants.txt";
 
 #[derive(Debug)]
 pub struct Parser<'a> {
@@ -49,6 +50,32 @@ impl<'a> Parser<'a> {
             line_nr += 1
         }
         Ok(pins)
+    }
+
+    pub fn parse_constants(&self) -> Result<Option<One>, Error>{
+        let mut pathbuf = PathBuf::new();
+        pathbuf.push(self.path);
+        pathbuf.push(Path::new(CONSTS));
+        let mut reader = BufReader::new(try!(File::open(pathbuf.as_path())));
+
+        let mut line = String::default();
+        try!(reader.read_line(&mut line));
+        let tokens: Vec<&str> = line.split_whitespace().collect();
+        if tokens[0].trim() != "ONE" {
+            return parse_err(0, tokens[0], "doesn't match 'ONE'");
+        }
+        
+        let mut wires: Vec<Wire> = Vec::new();
+        let to_id = |x| if x >= 0 {
+            Ok(ID::Gate(x as u64))
+        } else {
+            Ok(ID::Output((-1 * x) as u64))
+        };
+
+        for token in tokens.iter().skip(1) {
+             wires.push(try!(parse_wire(0, token, &to_id)));
+        }
+        Ok(Some(One::new(wires)))
     }
 }
 

@@ -21,6 +21,27 @@ impl fmt::Display for Pin {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct One {
+    wires: Vec<Wire>,
+}
+
+impl One {
+    pub fn new(wires: Vec<Wire>) -> One{
+        One{wires: wires}
+    }
+}
+
+impl fmt::Display for One {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "ONE "));
+        for wire in &self.wires {
+            try!(write!(f, "{} ", wire));
+        }
+        write!(f, "")
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct IOPin {
     id: ID,
     wires: Vec<Wire>,
@@ -48,7 +69,7 @@ impl IOPin {
 }
 
 impl fmt::Display for IOPin {
-    #[inline]
+
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.id {
             ID::Input(id) => {

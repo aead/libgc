@@ -29,7 +29,14 @@ fn main(){
             return;
         }
     };
-    let mut circuit = Circuit::new(inputs, gates);
+    let constants = match parser.parse_constants() {
+        Ok(val) => val,
+        Err(why) => {
+            println!("{}", why);
+            None
+        }
+    };
+    let mut circuit = Circuit::new(inputs, gates, constants);
     circuit.sort();
     println!("{}", circuit);
 }
