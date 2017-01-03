@@ -56,10 +56,10 @@ impl fmt::Display for IOPin {
                 if self.wires.len() > 0 {
                     try!(write!(f, " "));
                     for wire in &self.wires {
-                        try!(write!(f, "{}", wire));
+                        try!(write!(f, "{} ", wire));
                     }
                 }
-            },
+            }
             ID::Output(id) => try!(write!(f, "-{}", id)),
             _ => (),
         }
@@ -109,7 +109,7 @@ impl cmp::PartialEq<u64> for ID {
         self.u64() == *other
     }
 }
-    
+
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Gate {
