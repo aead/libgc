@@ -1,8 +1,10 @@
 
 use std::error::Error as ErrorTrait;
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::ops::IndexMut;
+use std::collections::HashSet;
 
-use super::types::Gate;
+use super::types::{Gate, Wire, ID};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Error {
@@ -92,41 +94,41 @@ fn new_nodes(gates: &Vec<Gate>) -> Vec<i64> {
     nodes
 }
 
+
 /*
-fn normalize(gates: Vec<Gate>) -> Vec<Gate>{
-    let mut norm: Vec<Gate> = Vec::with_capacity(gates.len());
-    let mut mapping = HashMap::new();
+# See: github.com/aead/issues/5
+pub fn normalize(gates: Vec<Gate>) -> Vec<Gate>{
+    let mut normed: Vec<Gate> = Vec::with_capacity(gates.len());
+    let mut changed: HashSet<&Wire> = HashSet::new();
 
-    let mut i: u64 = 1;
+    let mut new_id: u64 = 1;
     for gate in &gates {
-        let (old_id, new_id) = (gate.id(), i);
+        let old_id = gate.id();
+        let mut normed_gate = gate.clone();
+        normed_gate.set_id(new_id);
+        normed.push(normed_gate);
 
-        let mut n_gate = gate.clone();
-        n_gate.set_id(new_id);
-        norm.push(n_gate);
+        let mut j = 0;
+        for tmp in gates.iter().take((new_id-1) as usize) {
+            let mut i = 0;
+            for wire in tmp {
+                let dst = wire.destination();
+                let id: u64 = dst.into();
+                if dst.is_gate() && id == old_id {
+                    if !changed.contains(&wire){
+                        changed.insert(wire);
 
-        let mut j = 1;
-        for tmp_gate in &mut norm {
-            for mut wire in tmp_gate {
-                let dst: ID = wire.destination();
-                if dst.is_gate() {
-                    let dst: u64 = dst.into();
-                    if dst == old_id {
-                        let hit = match mapping.entry(j) {
-                            Entry::Occupied(val) => *(val.get()) == old_id,
-                            Entry::Vacant(_) => false,
-                        };
-                        if hit {
-                            wire.set_destination(ID::Gate(new_id));
-                        }
+                        let mut copy = *wire;
+                        copy.set_destination(ID::Gate(new_id));
+                        normed.index_mut(j).replace(i, copy);
                     }
                 }
+                i += 1;
             }
             j += 1;
-            mapping.insert(j, new_id);
         }
-        i += 1;
+        new_id += 1;
     }
-    norm
+    normed
 }
 */

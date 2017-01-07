@@ -447,6 +447,11 @@ impl Gate {
         self.wires.push(Wire::to_output(dst))
     }
 
+    pub fn replace(&mut self, index: usize, with: Wire) {
+        self.wires.push(with);
+        self.wires.swap_remove(index);
+    }
+
     #[inline]
     pub fn set_id(&mut self, id: u64) {
         self.id = ID::Gate(id);
