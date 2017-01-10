@@ -1,10 +1,8 @@
 
 use std::error::Error as ErrorTrait;
 use std::fmt::{Display, Formatter, Result as FmtResult};
-use std::ops::IndexMut;
-use std::collections::HashSet;
 
-use super::types::{Gate, Wire, ID};
+use super::types::Gate;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Error {

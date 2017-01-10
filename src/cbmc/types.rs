@@ -42,7 +42,7 @@ impl Into<u64> for ID {
 impl Display for ID {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match *self {
-            ID::Input(id) => write!(f, "InWire:#{}", id),
+            ID::Input(id) => write!(f, "+{}", id),
             ID::Output(id) => write!(f, "-{}", id),
             ID::Gate(id) => write!(f, "{}", id),
         }
@@ -111,13 +111,15 @@ impl<'a> IntoIterator for &'a IOPin {
 
 impl Display for IOPin {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        try!(write!(f, "{}", self.id));
-        
-        let (mut i, last) = (0, self.wires.len()-1);
+        let (mut i, len) = (0, self.wires.len());
+        if len == 0 {
+            return Ok(());
+        }
+
+        try!(write!(f, "{}->", self.id));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
-            
-            if i < last {
+            if i < len-1 {
                 try!(write!(f, " "));
                 i += 1;
             }
@@ -175,6 +177,11 @@ impl IOPin {
     }
 
     #[inline]
+    pub fn id(&self) -> ID {
+        self.id
+    }    
+
+    #[inline]
     pub fn connect(&mut self, wire: Wire) {
         self.wires.push(wire);
     }
@@ -223,8 +230,8 @@ pub struct Wire {
 impl Display for Wire {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match self.pin {
-            Some(pin) => write!(f, "0:{}:{}", self.to, pin),
-            None => write!(f, "0:{}:0",self.to),
+            Some(pin) => write!(f, "{}:{}", self.to, pin),
+            None => write!(f, "{}",self.to),
         }
     }
 }
@@ -315,10 +322,10 @@ pub enum GateType {
 impl Display for GateType {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match *self {
-            GateType::AND => write!(f, "AND 2"),
-            GateType::OR => write!(f, "OR 2"),
-            GateType::XOR => write!(f, "XOR 2"),
-            GateType::NOT => write!(f, "NOT 1"),
+            GateType::AND => write!(f, "A"),
+            GateType::OR => write!(f, "O"),
+            GateType::XOR => write!(f, "X"),
+            GateType::NOT => write!(f, "N"),
         }
     }
 }
@@ -342,16 +349,16 @@ pub struct Gate {
 
 impl Display for Gate {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        try!(write!(f, "{} {}", self.id, self.gtype));
-        if self.wires.len() > 0{
-            try!(write!(f, " "));
+        let (mut i, len) = (0, self.wires.len());
+        if len == 0 {
+            return Ok(());
         }
-
-        let (mut i, last) = (0, self.wires.len()-1);
+        
+        try!(write!(f, "{}->", self.id));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
             
-            if i < last {
+            if i < len-1 {
                 try!(write!(f, " "));
                 i += 1;
             }
@@ -447,6 +454,7 @@ impl Gate {
         self.wires.push(Wire::to_output(dst))
     }
 
+    #[inline]
     pub fn replace(&mut self, index: usize, with: Wire) {
         self.wires.push(with);
         self.wires.swap_remove(index);
@@ -458,8 +466,13 @@ impl Gate {
     }
 
     #[inline]
-    pub fn id(&self) -> u64{
+    pub fn id(&self) -> ID {
         self.id.into()
+    }
+
+    #[inline]
+    pub fn get_type(&self) -> GateType{
+        self.gtype
     }
 
     #[inline]
