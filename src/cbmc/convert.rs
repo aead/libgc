@@ -39,6 +39,10 @@ impl<'a> Converter<'a> {
     }
 
     pub fn new(path: &Path) -> IOResult<Converter> {
+        Self::with_capacity(4 * 1024* 1024, path)  // 4 MB
+    }
+
+    pub fn with_capacity(cap: usize, path: &Path) -> IOResult<Converter> {
         if !path.is_dir(){
             if !path.exists() {
                 try!(fs::create_dir(path));
@@ -48,7 +52,7 @@ impl<'a> Converter<'a> {
         }
         Ok(Converter{
             path: path,
-            cap: 4*1024*1024, // 4 MB
+            cap: cap,
         })
     }
 

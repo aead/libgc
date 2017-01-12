@@ -1,6 +1,6 @@
 
 use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Error as IOError, Result as IOResult, ErrorKind};
 use std::fs::File;
 
 use super::types::*;
@@ -24,8 +24,14 @@ impl<'a> Parser<'a> {
         pathbuf
     }
 
-    pub fn new(path: &Path) -> Parser {
-        Parser { path: path }
+    pub fn new(path: &Path) -> IOResult<Parser> {
+        if !path.exists() {
+            return Err(IOError::new(ErrorKind::NotFound, format!("{}", path.display())));
+        }
+        if !path.is_dir() {
+            return Err(IOError::new(ErrorKind::NotFound, format!("{} isn't a directory", path.display())));
+        }
+        Ok(Parser { path: path })
     }
 
     pub fn parse_gates(&self) -> Result<Vec<Gate>, Error> {

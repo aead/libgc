@@ -26,7 +26,7 @@ impl ErrorTrait for Error {
     }
 }
 
-pub fn sort_gates(gates: &mut Vec<Gate>) -> Result<Vec<Gate>,Error>{
+pub fn sort_gates(gates: &Vec<Gate>) -> Result<Vec<Gate>,Error>{
     let mut nodes = new_nodes(gates);
     let mut sorted: Vec<Gate> = Vec::with_capacity(gates.len());
     let mut marked = Vec::new();
@@ -64,7 +64,7 @@ fn mark_nodes(marked: &mut Vec<usize>, nodes: &mut Vec<i64>) -> bool {
 
 fn sweep_nodes(marked: &mut Vec<usize>,
                nodes: &mut Vec<i64>,
-               from: &mut Vec<Gate>,
+               from: &Vec<Gate>,
                to: &mut Vec<Gate>) {
     for node in marked {
         let ref gate = from[*node];
