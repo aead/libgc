@@ -1,7 +1,7 @@
 
 use std::error::Error as ErrorTrait;
-use std::fmt;
-use std::convert;
+use std::fmt::{Display,Result,Formatter};
+use std::convert::From;
 use std::io;
 use std::num;
 
@@ -18,10 +18,10 @@ impl Error {
 
     #[inline]
     fn _new(line: Option<u64>, msg: String) -> Error {
-         Error {
+        Error {
             line: line,
             msg: msg,
-        }
+       }
     }
 }
 
@@ -32,20 +32,20 @@ impl ErrorTrait for Error {
 }
 
 
-impl convert::From<io::Error> for Error{
+impl From<io::Error> for Error{
     fn from(err: io::Error) -> Error{
         Error::_new(None, format!("{}", err))
     }
 }
 
-impl convert::From<num::ParseIntError> for Error {
+impl From<num::ParseIntError> for Error {
     fn from(err: num::ParseIntError) -> Error{
         Error::_new(None, format!("{}", err))
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> Result {
         match self.line {
             Some(line_nr) => write!(f, "Line: {} error: {}", line_nr, self.msg),
             None => write!(f, "error: {}", self.msg),
