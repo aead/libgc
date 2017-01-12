@@ -42,7 +42,7 @@ fn show_help(){
 
 pub fn main(){
     let args: Vec<String> = env::args().skip(1).collect();
-    if args.len() == 4 && args[0].starts_with("src") && args[2].starts_with("dst") {
+    if args.len() == 4 && args[0].starts_with("-src") && args[2].starts_with("-dst") {
         let src_path = fail_on_error!(fs::canonicalize(Path::new(args[1].as_str())), args[1]);
         let dst_path = fail_on_error!(fs::canonicalize(Path::new(args[3].as_str())), args[3]);
 
