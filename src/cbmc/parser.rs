@@ -75,4 +75,15 @@ impl<'a> Parser<'a> {
          let num_of_gates = try!(buf.trim().parse::<usize>());
          Ok(num_of_gates)
     }
+
+    pub fn parse_constant(&self) -> Result<Option<Constant>, Error> {
+         let mut reader = BufReader::new(try!(File::open(self.join_path(CONSTS).as_path())));
+         let mut buf = String::default();
+
+         let size = try!(reader.read_line(&mut buf));
+         if size == 0 {
+             return Ok(None); // No constant necessary for this circuit
+         }
+         Ok(Some(try!(Constant::parse(buf.as_str()))))
+    }
 }

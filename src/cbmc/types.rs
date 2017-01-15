@@ -311,6 +311,77 @@ impl Wire {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Constant {
+    wires: Vec<Wire>,
+}
+
+impl Constant {
+    pub fn parse(expr: &str) -> Result<Constant, Error> {
+        let tokens: Vec<&str> = expr.split_whitespace().collect();
+        if tokens.len() < 2 {
+            fail!(0, &expr, "doesn't match 'ONE' 'WIRE(s)'");
+        }
+        let token = tokens[0].trim();
+        if token != "ONE" {
+            fail!(0, token, "dosn't match constant identifier 'ONE'");
+        }
+        
+        let mut wires = Vec::new();
+        for token in tokens.iter().skip(1) {
+            wires.push(try!(Wire::parse(token.trim(), 0)));
+        }
+        Ok(Constant{wires: wires})
+    }
+}
+
+impl Display for Constant {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        let (mut i, len) = (0, self.wires.len());
+        if len == 0 {
+            return Ok(());
+        }
+        
+        try!(write!(f, "ONE->"));
+        for wire in &self.wires {
+            try!(write!(f, "{}", wire));
+            
+            if i < len-1 {
+                try!(write!(f, " "));
+                i += 1;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl IntoIterator for Constant {
+    type Item = Wire;
+    type IntoIter = vec::IntoIter<Wire>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.wires.into_iter()
+    } 
+}
+
+impl<'a> IntoIterator for &'a Constant {
+    type Item = &'a Wire;
+    type IntoIter = slice::Iter<'a, Wire>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.wires.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Constant {
+    type Item = &'a mut Wire;
+    type IntoIter = slice::IterMut<'a, Wire>;
+
+    fn into_iter(mut self) -> Self::IntoIter {
+        self.wires.iter_mut()
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum GateType {
     AND,

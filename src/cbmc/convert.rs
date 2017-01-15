@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::{Path,PathBuf};
 use std::io::{Error, ErrorKind, Result as IOResult, LineWriter, Write};
 
-use super::types::{Gate, IOPin};
+use super::types::{Gate, IOPin, Constant};
 
 const CIRCUIT: &'static str = "circuit.txt";
 const META_INFO: &'static str = "meta_info.txt";
@@ -87,14 +87,20 @@ impl<'a> Converter<'a> {
         writer.flush()
     }
 
-    pub fn create_meta_info(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>) -> IOResult<()>{
+    pub fn create_meta_info(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>, constant: Option<Constant>) -> IOResult<()>{
         let mut writer: LineWriter<File> = try!(self.open_file(META_INFO));
         try!(writer.write_fmt(format_args!("INPUT {}", inputs.len())));
         try!(writer.write_all(NEW_LINE));
         try!(writer.write_fmt(format_args!("GATES {}", gates.len())));
         try!(writer.write_all(NEW_LINE));
         try!(writer.write_fmt(format_args!("OUPUTS {}", count_outputs(gates))));
-
+        match constant {
+            Some(cons) => {
+                try!(writer.write_all(NEW_LINE));
+                try!(writer.write_fmt(format_args!("{}", cons)));
+            },
+            _ => (),
+        };
         writer.flush()
     }
 }

@@ -50,10 +50,11 @@ pub fn main(){
         let gates = fail_on_error!(parser.parse_gates());
         let sorted_gates = fail_on_error!(sort_gates(&gates));
         let inputs = fail_on_error!(parser.parse_inputs());
+        let constant = fail_on_error!(parser.parse_constant());
 
         let converter = fail_on_error!(Converter::with_capacity(16*1024*1024, dst_path.as_path()));
         fail_on_error!(converter.convert_circuit(&inputs, &sorted_gates));
-        fail_on_error!(converter.create_meta_info(&inputs, &sorted_gates));
+        fail_on_error!(converter.create_meta_info(&inputs, &sorted_gates, constant));
     }else{ 
         show_help();
     }
