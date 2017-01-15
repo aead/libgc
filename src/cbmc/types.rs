@@ -354,7 +354,7 @@ impl Display for Gate {
             return Ok(());
         }
         
-        try!(write!(f, "{}->", self.id));
+        try!(write!(f, "{}:{}->", self.gtype, self.id));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
             

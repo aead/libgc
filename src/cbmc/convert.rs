@@ -6,9 +6,8 @@ use std::io::{Error, ErrorKind, Result as IOResult, LineWriter, Write};
 
 use super::types::{Gate, IOPin};
 
-const GATES: &'static str = "gates.txt";
-const WIRES: &'static str = "wires.txt";
-const META_INFO: &'static str = "info.txt";
+const CIRCUIT: &'static str = "circuit.txt";
+const META_INFO: &'static str = "meta_info.txt";
 const NEW_LINE: &'static [u8] = &['\n' as u8];
 
 pub struct Converter<'a> {
@@ -59,23 +58,9 @@ impl<'a> Converter<'a> {
     pub fn buffering(&mut self, cap: usize) {
         self.cap = cap;
     }
-
-    pub fn convert_gates(&self, gates: &Vec<Gate>) -> IOResult<()>{
-        let mut writer: LineWriter<File> = try!(self.open_file(GATES));
-        let (mut i, len) = (0, gates.len());
-        for gate in gates {
-            try!(writer.write_fmt(format_args!("{} {}", gate.id(), gate.get_type())));
-            if i < len-1 {
-                try!(writer.write_all(NEW_LINE));
-                i += 1;
-            }
-        }
-        try!(writer.flush());
-        Ok(())
-    }
     
-    pub fn convert_wires(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>) -> IOResult<()>{
-        let mut writer: LineWriter<File> = try!(self.open_file(WIRES));
+    pub fn convert_circuit(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>) -> IOResult<()>{
+        let mut writer: LineWriter<File> = try!(self.open_file(CIRCUIT));
         let (mut i, len) = (0, inputs.len());
         for input in inputs {
             try!(writer.write_fmt(format_args!("{}", input)));
@@ -102,7 +87,7 @@ impl<'a> Converter<'a> {
         writer.flush()
     }
 
-    pub fn create_info(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>) -> IOResult<()>{
+    pub fn create_meta_info(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>) -> IOResult<()>{
         let mut writer: LineWriter<File> = try!(self.open_file(META_INFO));
         try!(writer.write_fmt(format_args!("INPUT {}", inputs.len())));
         try!(writer.write_all(NEW_LINE));
