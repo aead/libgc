@@ -1,6 +1,4 @@
+pub mod types;
 
-mod types;
 mod error;
-
-pub use self::error::ParseError;
-pub use self::types::*;
+pub use self::error::ParseError as Error;

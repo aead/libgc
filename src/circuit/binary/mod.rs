@@ -1,10 +1,11 @@
+mod error;
 
 use std::path::{Path,PathBuf};
-use std::io::{BufRead, BufReader, Error};
+use std::io::{BufRead, BufReader};
 use std::fs::File;
 use std::collections::HashMap;
-
-use super::super::parser::{ID, Pin, GateType, Wire, Gate, InputPin, ParseError};
+use super::super::parser::Error;
+use super::super::parser::types::{ID, Pin, GateType, Wire, Gate, InputPin};
 
 type Entry = (ID, Pin);
 
@@ -26,7 +27,7 @@ impl<'a> BinaryCircuit<'a> {
         }
     }
 
-    pub fn execute(&mut self) -> Result<Vec<u8>,ParseError>{
+    pub fn execute(&mut self) -> Result<Vec<u8>,Error>{
         let mut buf = PathBuf::new();
         buf.push(self.path);
         buf.push(Path::new("circuit.txt"));

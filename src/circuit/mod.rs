@@ -1,6 +1,4 @@
 
-mod binary;
-mod gate;
-mod cipher;
-
-pub use self::binary::BinaryCircuit;
+pub mod binary;
+//mod gate;
+//mod cipher;

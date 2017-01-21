@@ -23,7 +23,6 @@ impl ErrorTrait for ParseError {
     }
 }
 
-
 impl From<io::Error> for ParseError{
     fn from(err: io::Error) -> ParseError{
         ParseError::new(format!("{}", err))

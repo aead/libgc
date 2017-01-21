@@ -5,7 +5,7 @@ use std::env;
 use std::path::Path;
 use std::process;
 
-use libgc::circuit::BinaryCircuit;
+use libgc::circuit::binary::BinaryCircuit;
 
 macro_rules! fail_on_error {
     ($exp:expr, $msg:expr) => {
