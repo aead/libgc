@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use super::{ID, Pin};
 use super::super::error::ParseError;
 
@@ -5,6 +6,15 @@ use super::super::error::ParseError;
 pub struct Wire {
     dst: ID,
     pin: Option<Pin>
+}
+
+impl Display for Wire {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult{
+        match self.pin {
+            Some(pin) => write!(f, "{}:{}", self.dst, pin), 
+            _ => write!(f, "{}", self.dst),
+        } 
+    }
 }
 
 impl Wire {

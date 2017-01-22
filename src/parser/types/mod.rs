@@ -6,6 +6,7 @@ pub use self::wire::Wire;
 
 use std::slice;
 use std::vec;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::convert::Into;
 use std::iter::IntoIterator;
 use super::error::ParseError;
@@ -15,6 +16,16 @@ pub enum ID {
     Input(u64),
     Gate(u64),
     Output(u64),
+}
+
+impl Display for ID {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult{
+        match *self {
+            ID::Input(id) => write!(f, "+{}", id),
+            ID::Gate(id) => write!(f, "{}", id),
+            ID::Output(id) => write!(f, "-{}", id),
+        } 
+    }
 }
 
 impl Into<u64> for ID {
@@ -31,6 +42,15 @@ impl Into<u64> for ID {
 pub enum Pin{
     Left,
     Right,
+}
+
+impl Display for Pin {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult{
+        match *self {
+            Pin::Left => write!(f, "0"),
+            Pin::Right => write!(f, "1"),
+        } 
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
