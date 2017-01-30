@@ -91,7 +91,7 @@ impl<'a> Converter<'a> {
         let mut writer: LineWriter<File> = try!(self.open_file(META_INFO));
         try!(writer.write_fmt(format_args!("INPUT {}", inputs.len())));
         try!(writer.write_all(NEW_LINE));
-        try!(writer.write_fmt(format_args!("GATES {}", gates.len())));
+        try!(writer.write_fmt(format_args!("GATES {}", gates.len()+1)));
         try!(writer.write_all(NEW_LINE));
         try!(writer.write_fmt(format_args!("OUPUTS {}", count_outputs(gates))));
         match constant {
@@ -137,7 +137,7 @@ impl<'a> Converter<'a> {
 }
 
 fn count_outputs(gates: &Vec<Gate>) -> u64{
-    let mut ctr = 0;
+    let mut ctr = 1;
     for gate in gates {
         for wire in gate {
             if wire.is_output() {

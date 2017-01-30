@@ -50,7 +50,10 @@ fn mark_nodes(marked: &mut Vec<usize>, nodes: &mut Vec<i64>) -> bool {
     marked.clear();
     for node in nodes {
         match *node {
-            0 => marked.push(n),
+            0 => {
+                marked.push(n);
+                done = false;
+            },
             -1 => cnt += 1,
             _ => done = false,
         };
@@ -71,6 +74,8 @@ fn sweep_nodes(marked: &mut Vec<usize>,
         for wire in gate {
             if !wire.is_output() {
                 nodes[wire.destination().as_index()] -= 1;
+            }else {
+                println!("{}",wire.destination());
             }
         }
         to.push(gate.clone());
