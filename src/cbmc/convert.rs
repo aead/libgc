@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::{Path,PathBuf};
 use std::io::{Error, ErrorKind, Result as IOResult, LineWriter, Write};
 
-use super::types::{Gate, IOPin, Constant};
+use super::types::{Gate, IOPin, Constant, GateType, Pin};
 
 const CIRCUIT: &'static str = "circuit.txt";
 const META_INFO: &'static str = "meta_info.txt";
@@ -102,6 +102,37 @@ impl<'a> Converter<'a> {
             _ => (),
         };
         writer.flush()
+    }
+
+    pub fn replace_not_gates(&self, gates: &Vec<Gate>, cons: Option<Constant>) -> (Vec<Gate>, Option<Constant>){
+        let mut constant: Option<Constant> = None;
+        let mut not_free = Vec::new();
+        for gate in gates{
+            match gate.get_type() {
+                GateType::NOT => {
+                    let id: u64 = gate.id().into();
+                    let mut xor = Gate::new(GateType::XOR, id);
+                    for wire in gate {
+                        xor.connect(*wire);
+                    }
+                    not_free.push(xor);
+                    if constant.is_none() {
+                         constant = Some(Constant::new());
+                    }
+                    constant.as_mut().unwrap().connect_to_gate(id, Pin::Right);
+                },
+                _ => not_free.push(gate.clone()),
+            }
+        }
+        match (constant, cons) {
+            (Some(mut c1), Some(c2)) => {
+                c1.connect(c2);
+                (not_free, Some(c1))
+            }
+            (Some(c), None) => (not_free, Some(c)),
+            (None, Some(c)) => (not_free, Some(c)),
+            _ => (not_free, None),
+        }
     }
 }
 

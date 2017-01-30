@@ -1,11 +1,12 @@
 extern crate libgc;
+extern crate getopts;
 
 use std::fs;
 use std::env;
 use std::path::Path;
-use std::process;
 
 use libgc::cbmc::{Parser,Converter,sort_gates};
+use getopts::{Options,Matches};
 
 macro_rules! fail_on_error {
     ($exp:expr, $msg:expr) => {
@@ -13,7 +14,7 @@ macro_rules! fail_on_error {
             Ok(val) => val,
             Err(why) => {
                 println!("{} - {}", $msg, why);
-                process::exit(1);
+                return;
             },
         }
     };
@@ -22,40 +23,78 @@ macro_rules! fail_on_error {
             Ok(val) => val,
             Err(why) => {
                 println!("{}", why);
-                process::exit(1);
+                return;
             },
         }
     };
 }
 
-fn show_help(){
-    println!("gc-convert is a tool for converting cbmc-gc compiler output files into the libgc format\n");
-    println!("Usage:");
-    println!("\t gc-convert -src [src_path] -dst [dst_path]\n");
-    println!("\t src\n \t\t path to a directory containing the cbmc-gc files.");
-    println!("\t dst\n \t\t path to a directory (must exists) for the libgc files.");
-    process::exit(0);
+macro_rules! must {
+    ($exp:expr, $fail:expr) => {
+        match $exp {
+            Some(val) => val,
+            None => {
+                $fail;
+                return;
+            },
+        }
+    };
+}
+
+fn help(program: &str, opts: Options) {
+    let brief = format!("Usage: {} [options]", program);
+    print!("{}", opts.usage(&brief));
+}
+
+fn short_help(program: &str, opts: Options) {
+    print!("{}\n", opts.short_usage(program));
 }
 
 // cargo build --release
-// ./target/release/gc-convert -src [src_path] -dst [dst_path]
+// ./target/release/gc-convert --src SRC -dst DST --keep-NOT
 
 pub fn main(){
-    let args: Vec<String> = env::args().skip(1).collect();
-    if args.len() == 4 && args[0].starts_with("-src") && args[2].starts_with("-dst") {
-        let src_path = fail_on_error!(fs::canonicalize(Path::new(args[1].as_str())), args[1]);
-        let dst_path = fail_on_error!(fs::canonicalize(Path::new(args[3].as_str())), args[3]);
-
-        let parser = fail_on_error!(Parser::new(src_path.as_path()));
-        let gates = fail_on_error!(parser.parse_gates());
-        let sorted_gates = fail_on_error!(sort_gates(&gates));
-        let inputs = fail_on_error!(parser.parse_inputs());
-        let constant = fail_on_error!(parser.parse_constant());
-
-        let converter = fail_on_error!(Converter::with_capacity(16*1024*1024, dst_path.as_path()));
-        fail_on_error!(converter.convert_circuit(&inputs, &sorted_gates));
-        fail_on_error!(converter.create_meta_info(&inputs, &sorted_gates, constant));
-    }else{ 
-        show_help();
+    let mut opts = Options::new();
+    opts.optopt("", "src", "path to a directory containing the cbmc-gc files.", "SRC");
+    opts.optopt("", "dst", "path to a directory (must exists) for the libgc files.", "DST");
+    opts.optopt("", "cap", "IO buffering in MB - default is 16", "CAPACITY");
+    opts.optflag("", "keep-NOT", "disable NOT gate replacement - a binary circuit containing NOT gates cannot turned into a garbled circuit");
+    opts.optflag("h", "help", "print this help menu");
+    
+    let args: Vec<String> = env::args().collect();
+    let program = args[0].clone();
+    let matches: Matches = fail_on_error!(opts.parse(&args[1..]));
+    
+    if matches.opt_present("h") {
+        help(&program, opts);
+        return;
     }
+
+    let src = must!(matches.opt_str("src"), short_help(&program, opts));
+    let dst = must!(matches.opt_str("dst"), short_help(&program, opts));
+    
+    let src_path = fail_on_error!(fs::canonicalize(Path::new(src.as_str())), src);
+    let dst_path = fail_on_error!(fs::canonicalize(Path::new(dst.as_str())), dst);
+
+    let cap = 1024 * 1024 * if matches.opt_present("cap") {
+        fail_on_error!(must!(matches.opt_default("cap", "16"), println!("")).parse::<usize>())
+    }else{
+        16
+    };
+
+    let parser = fail_on_error!(Parser::with_capacity(cap, src_path.as_path()));
+    let gates = fail_on_error!(parser.parse_gates());
+    let sorted_gates = fail_on_error!(sort_gates(&gates));
+    let inputs = fail_on_error!(parser.parse_inputs());
+    let constant = fail_on_error!(parser.parse_constant());
+
+    let converter = fail_on_error!(Converter::with_capacity(cap, dst_path.as_path()));    
+    let (sorted_gates, constant) = if !matches.opt_present("keep-NOT") { 
+        converter.replace_not_gates(&sorted_gates, constant)
+    }else{
+        (sorted_gates, constant)
+    };
+
+    fail_on_error!(converter.convert_circuit(&inputs, &sorted_gates));
+    fail_on_error!(converter.create_meta_info(&inputs, &sorted_gates, constant));
 }

@@ -317,6 +317,12 @@ pub struct Constant {
 }
 
 impl Constant {
+    pub fn new() -> Constant {
+        Constant{
+            wires: Vec::new(),
+        }
+    }
+
     pub fn parse(expr: &str) -> Result<Constant, Error> {
         let tokens: Vec<&str> = expr.split_whitespace().collect();
         if tokens.len() < 2 {
@@ -332,6 +338,16 @@ impl Constant {
             wires.push(try!(Wire::parse(token.trim(), 0)));
         }
         Ok(Constant{wires: wires})
+    }
+
+    #[inline]
+    pub fn connect(&mut self, old: Constant) {
+        self.wires.extend(old.wires);
+    }
+
+    #[inline]
+    pub fn connect_to_gate(&mut self, dst: u64, pin: Pin) {
+        self.wires.push(Wire::to_gate(dst, pin))
     }
 }
 
