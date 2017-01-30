@@ -41,7 +41,7 @@ macro_rules! must {
     };
 }
 
-const GIT_REPO: &str = "https://github.com/aead/libgc/issues";
+const GIT_REPO: &'static str = "https://github.com/aead/libgc/issues";
 
 fn help(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
