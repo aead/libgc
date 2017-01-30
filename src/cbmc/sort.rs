@@ -74,8 +74,6 @@ fn sweep_nodes(marked: &mut Vec<usize>,
         for wire in gate {
             if !wire.is_output() {
                 nodes[wire.destination().as_index()] -= 1;
-            }else {
-                println!("{}",wire.destination());
             }
         }
         to.push(gate.clone());
