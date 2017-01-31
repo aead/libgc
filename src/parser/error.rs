@@ -1,18 +1,46 @@
 use std::error::Error as ErrorTrait;
 use std::fmt::{Display,Result,Formatter};
-use std::convert::From;
-use std::io;
-use std::num;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ErrorType {
+    UnknownGateType,
+    InvalidInputID,
+    InvalidGateID,
+    InvalidOutputID,
+    InvalidPin,
+    InvalidInputPin,
+    InvalidGate,
+    InvalidWire,
+    Unknown,
+}
+
+impl Display for ErrorType {
+    fn fmt(&self, f: &mut Formatter) -> Result{
+        match *self {
+            ErrorType::UnknownGateType => write!(f, "unknown gate type"),
+            ErrorType::InvalidInputID => write!(f, "expected +'ID'"),
+            ErrorType::InvalidGateID => write!(f, "expected 'ID'"),
+            ErrorType::InvalidOutputID => write!(f, "expected -'ID'"),
+            ErrorType::InvalidPin => write!(f, "expected '0' or '1'"),
+            ErrorType::InvalidInputPin => write!(f, "expected pattern +'ID'->'WIRE'"),
+            ErrorType::InvalidGate => write!(f, "expected 'GATE'->'WIRE' pattern"),
+            ErrorType::InvalidWire => write!(f, "expected 'ID:'PIN' pattern"),
+            ErrorType::Unknown => write!(f, "unknown parser error"),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ParseError {
-    msg: String,
+    err_type: ErrorType,
+    msg: String
 }
 
 impl ParseError {
-    pub fn new(msg: String) -> ParseError {
+    pub fn new<T: Display>(err_type: ErrorType, expr: T) -> ParseError {
        ParseError{
-           msg: msg,
+           err_type: err_type,
+           msg: format!("{} : {}", err_type, expr),
        }
     }
 }
@@ -20,18 +48,6 @@ impl ParseError {
 impl ErrorTrait for ParseError {
     fn description(&self) -> &str {
          self.msg.as_ref()
-    }
-}
-
-impl From<io::Error> for ParseError{
-    fn from(err: io::Error) -> ParseError{
-        ParseError::new(format!("{}", err))
-    }
-}
-
-impl From<num::ParseIntError> for ParseError {
-    fn from(err: num::ParseIntError) -> ParseError{
-        ParseError::new(format!("{}", err))
     }
 }
 

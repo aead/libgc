@@ -41,8 +41,6 @@ macro_rules! must {
     };
 }
 
-const GIT_REPO: &'static str = "https://github.com/aead/libgc/issues";
-
 fn help(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
     print!("{}", opts.usage(&brief));
@@ -50,10 +48,6 @@ fn help(program: &str, opts: Options) {
 
 fn short_help(program: &str, opts: Options) {
     println!("{}", opts.short_usage(program));
-}
-
-fn bug() {
-    println!("This is a bug: Please open an issue at: {}" , GIT_REPO);
 }
 
 // cargo build --release
@@ -82,11 +76,10 @@ pub fn main(){
     let src_path = fail_on_error!(fs::canonicalize(Path::new(src.as_str())), src);
     let dst_path = fail_on_error!(fs::canonicalize(Path::new(dst.as_str())), dst);
 
-    let cap = 1024 * 1024 * if matches.opt_present("cap") {
-        fail_on_error!(must!(matches.opt_default("cap", "16"), bug()).parse::<usize>())
-    }else{
-        16
-    };
+    let cap = 1024 * 1024 * fail_on_error!(match matches.opt_str("cap") {
+        Some(val) => val.parse::<usize>(),
+        None => Ok(16),
+    });
 
     let parser = fail_on_error!(Parser::with_capacity(cap, src_path.as_path()));
     let gates = fail_on_error!(parser.parse_gates());

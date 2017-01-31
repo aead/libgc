@@ -3,6 +3,7 @@ use std::vec;
 use std::iter::IntoIterator;
 use super::{ID, Wire};
 use super::super::error::ParseError;
+use super::super::error::ErrorType::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum GateType{
@@ -23,22 +24,23 @@ impl Gate{
     pub fn parse(expr: &str) -> Result<Gate,ParseError> {
         let tokens: Vec<&str> = expr.split("->").collect();
         if tokens.len() != 2 {
-            return Err(ParseError::new(format!("expected 'GATE'->'WIRE' pattern - found {}", expr)));
+            fail!(InvalidGate, expr);
         }
 
         let token = tokens[0].trim();
         if token.len() < 3 {
-            return Err(ParseError::new(format!("expected 'TYPE':'ID' pattern - found {}", token)));     
+            fail!(InvalidGate, expr);
+            //return Err(ParseError::new(format!("expected 'TYPE':'ID' pattern - found {}", token)));     
         }
 
-        let gtype = try!(match &token[0..2]{
-            "A:" => Ok(GateType::AND),
-            "X:" => Ok(GateType::XOR),
-            "O:" => Ok(GateType::OR),
-            "N:" => Ok(GateType::NOT),
-            _ => Err(ParseError::new(format!("unknown gate type: {}", &token[0..2])))
-        });
-        let id = try!(token[2..].parse::<u64>());
+        let gtype = match &token[0..2]{
+            "A:" => GateType::AND,
+            "X:" => GateType::XOR,
+            "O:" => GateType::OR,
+            "N:" => GateType::NOT,
+            _ => fail!(UnknownGateType, &token[0..2]),
+        };
+        let id = try!(map_err!(token[2..].parse::<u64>(), ParseError::new(InvalidGateID, &token[2..])));
 
         let mut wires = Vec::new();
         for token in tokens[1].split_whitespace() {
@@ -58,14 +60,10 @@ impl Gate{
     }
 
     #[inline]
-    pub fn gate_type(&self) -> GateType {
-        self.gate_type
-    }
+    pub fn gate_type(&self) -> GateType { self.gate_type }
 
     #[inline]
-    pub fn id(&self) -> ID {
-        ID::Gate(self.id)
-    }
+    pub fn id(&self) -> ID { ID::Gate(self.id) }
 }
 
 impl IntoIterator for Gate {

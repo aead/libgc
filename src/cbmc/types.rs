@@ -279,10 +279,12 @@ impl Wire {
         }
     }
 
+    #[inline]
     pub fn to_gate(to: u64, pin: Pin) -> Wire {
         Self::new(ID::Gate(to), Some(pin))
     }
 
+    #[inline]
     pub fn to_output(to: u64) -> Wire {
         Self::new(ID::Output(to), None)
     }
@@ -290,11 +292,6 @@ impl Wire {
     #[inline]
     pub fn destination(&self) -> ID {
         self.to
-    }
-
-    #[inline]
-    pub fn set_destination(&mut self, id: ID) {
-        self.to = id;
     }
 
     #[inline]
@@ -532,16 +529,6 @@ impl Gate {
     }
 
     #[inline]
-    pub fn connect_to_gate(&mut self, dst: u64, pin: Pin) {
-        self.wires.push(Wire::to_gate(dst, pin))
-    }
-
-     #[inline]
-    pub fn connect_to_output(&mut self, dst: u64) {
-        self.wires.push(Wire::to_output(dst))
-    }
-
-    #[inline]
     pub fn replace(&mut self, index: usize, with: Wire) {
         self.wires.push(with);
         self.wires.swap_remove(index);
@@ -560,11 +547,6 @@ impl Gate {
     #[inline]
     pub fn get_type(&self) -> GateType{
         self.gtype
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.wires.len()
     }
 
     pub fn clone(&self) -> Gate {

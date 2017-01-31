@@ -1,6 +1,8 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use super::{ID, Pin};
 use super::super::error::ParseError;
+use super::super::error::ErrorType::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Wire {
@@ -20,23 +22,23 @@ impl Display for Wire {
 impl Wire {
     pub fn parse(expr: &str) -> Result<Wire,ParseError>{
         if expr.starts_with("-") {
-            let id = try!(expr[1..].parse::<u64>());
+            let id = try!(map_err!(expr[1..].parse::<u64>(), ParseError::new(InvalidOutputID, expr)));
             return Ok(Wire::new(ID::Output(id), None))
         }
 
         let tokens: Vec<&str> = expr.split(":").collect();
         if tokens.len() != 2 {
-            return Err(ParseError::new(format!("expected 'ID:'PIN' pattern - found {}", expr)));
+            fail!(InvalidWire, expr);
         }
 
         let token = tokens[0].trim();
-        let id = ID::Gate(try!(token.parse::<u64>()));
+        let id = try!(map_err!(token.parse::<u64>(), ParseError::new(InvalidGateID, token)));
         let pin = match tokens[1].trim() {
             "0" => Some(Pin::Left),
             "1" => Some(Pin::Right),
-            _ => return Err(ParseError::new(format!("expected '0' or '1' - found {}", token))),
+            _ => fail!(InvalidPin, token),
         };
-        Ok(Wire::new(id, pin))
+        Ok(Wire::new(ID::Gate(id), pin))
     }
 
     fn new(dst: ID, pin: Option<Pin>) -> Wire {
@@ -47,17 +49,10 @@ impl Wire {
     }
 
     #[inline]
-    pub fn dst(&self) -> ID {
-        self.dst
-    }
+    pub fn dst(&self) -> ID { self.dst }
 
     #[inline]
-    pub fn pin(&self) -> Option<Pin>{
-        match self.pin {
-            Some(pin) => Some(pin),
-            _ => None,
-        }
-    }
+    pub fn pin(&self) -> Option<Pin>{ self.pin }
 
     #[inline]
     pub fn is_output(&self) -> bool {

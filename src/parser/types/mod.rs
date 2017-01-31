@@ -10,6 +10,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::convert::Into;
 use std::iter::IntoIterator;
 use super::error::ParseError;
+use super::error::ErrorType::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ID {
@@ -63,14 +64,14 @@ impl InputPin {
     pub fn parse(expr: &str) -> Result<InputPin,ParseError> {
         let tokens: Vec<&str> = expr.split("->").collect();
         if tokens.len() != 2 {
-            return Err(ParseError::new(format!("expected pattern +'ID'->'WIRE' - found {}", expr)));
+            fail!(InvalidInputPin, expr);
         }
 
         let token = tokens[0].trim();
         if token.len() < 2 || !token.starts_with("+") {
-            return Err(ParseError::new(format!("expected pattern +'ID' - found {}", token)));     
+            fail!(InvalidInputID, token);
         }
-        let id = try!(token[1..].parse::<u64>());
+        let id = try!(map_err!(token[1..].parse::<u64>(), ParseError::new(InvalidInputID, &token[1..])));
 
         let mut wires = Vec::new();
         for token in tokens[1].split_whitespace() {
