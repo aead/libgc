@@ -60,6 +60,9 @@ impl Circuit {
                                 try!(Circuit::expect_some(c.sub.get_mut(&key),
                                                           format!("unknown sub circuit: {}", key)));
                             sub.set_input(id, 1);
+                            if sub.is_executable() {
+                                try!(sub.execute());
+                            }
                         }
                         _ => {
                             return Err(ExecError::from(format!("invalid edge: {}", edge)));
@@ -151,6 +154,9 @@ impl Circuit {
                         try!(Circuit::expect_some(self.sub.get_mut(&key),
                                                   format!("unknown sub circuit: {}", key)));
                     sub.set_input(edge.id().into(), val);
+                    if sub.is_executable() {
+                        try!(sub.execute());
+                    }
                 }
                 None => {
                     match edge.id() {
@@ -175,23 +181,11 @@ impl Circuit {
     }
 
     fn process_output(&mut self, node: &mut Node) -> Result<(), ExecError> {
-        let val = try!(self.get_output(node.id().into()));
         match node.circuit() {
-            Some(_) => {
-                for edge in node.edges() {
-                    try!(Circuit::check(edge.id().is_input(),
-                                        format!("invalid edge: expected input id - {}", edge)));
-                    let key = try!(Circuit::expect_some(edge.circuit(),
-                                                        format!("invalid edge: expected sub \
-                                                                 circuit - {}",
-                                                                edge)));
-                    let sub: &mut Circuit =
-                        try!(Circuit::expect_some(self.sub.get_mut(&key),
-                                                  format!("unknown sub circuit: {}", key)));
-                    sub.set_input(edge.id().into(), val);
-                }
-            }
-            None => {
+            Some(key) => {
+                let val = try!(try!(Circuit::expect_some(self.sub.get(&key),
+                                                         format!("unknown sub circuit: {}", key)))
+                    .get_output(node.id().into()));
                 for edge in node.edges() {
                     match edge.id() {
                         Output(id) => {
@@ -214,6 +208,33 @@ impl Circuit {
                                 try!(Circuit::expect_some(self.sub.get_mut(&key),
                                                           format!("unknown sub circuit: {}", key)));
                             sub.set_input(id, val);
+                            if sub.is_executable() {
+                                try!(sub.execute());
+                            }
+                        }
+                        _ => {
+                            return Err(ExecError::from(format!("invalid edge: {}", edge)));
+                        }
+                    }
+                }
+            }
+            None => {
+                let val = try!(self.get_output(node.id().into()));
+                for edge in node.edges() {
+                    match edge.id() {
+                        Input(id) => {
+                            let key = try!(Circuit::expect_some(edge.circuit(),
+                                                                format!("invalid edge: \
+                                                                         expected sub circuit \
+                                                                         - {}",
+                                                                        edge)));
+                            let sub: &mut Circuit =
+                                try!(Circuit::expect_some(self.sub.get_mut(&key),
+                                                          format!("unknown sub circuit: {}", key)));
+                            sub.set_input(id, val);
+                            if sub.is_executable() {
+                                try!(sub.execute());
+                            }
                         }
                         _ => {
                             return Err(ExecError::from(format!("invalid edge: {}", edge)));
@@ -281,6 +302,9 @@ impl Circuit {
                         try!(Circuit::expect_some(self.sub.get_mut(&key),
                                                   format!("unknown sub circuit: {}", key)));
                     sub.set_input(id, val);
+                    if sub.is_executable() {
+                        try!(sub.execute());
+                    }
                 }
                 _ => {
                     return Err(ExecError::from(format!("invalid edge: {}", edge)));

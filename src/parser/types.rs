@@ -4,7 +4,7 @@ use std::convert;
 /// ID represents an unique node / edge identifier of the circuit graph.
 /// There a three general purpose node types
 ///
-///   - INPUT   
+///   - INPUT
 ///   - OUTPUT
 ///   - GATE
 ///

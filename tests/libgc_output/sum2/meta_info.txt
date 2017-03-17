@@ -1,0 +1,4 @@
+INPUTS = 64
+GATES = 0
+OUTPUTS = 33
+c0 = /home/andreas/rust/libgc/tests/libgc_output/sum2/sub
