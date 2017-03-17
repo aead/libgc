@@ -1,8 +1,11 @@
-use std::error::Error as ErrorTrait;
-use std::fmt::{Display,Result,Formatter};
+use std::error::Error;
+use std::io;
+use std::fmt::{Display, Result, Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ErrorType {
+    IOError,
+
     UnknownGateType,
     InvalidInputID,
     InvalidGateID,
@@ -11,21 +14,25 @@ pub enum ErrorType {
     InvalidInputPin,
     InvalidGate,
     InvalidWire,
+    InvalidMetaInfo,
     Unknown,
 }
 
 impl Display for ErrorType {
-    fn fmt(&self, f: &mut Formatter) -> Result{
+    fn fmt(&self, f: &mut Formatter) -> Result {
         match *self {
+            ErrorType::IOError => write!(f, "IO operation failed"),
+
             ErrorType::UnknownGateType => write!(f, "unknown gate type"),
-            ErrorType::InvalidInputID => write!(f, "expected +'ID'"),
-            ErrorType::InvalidGateID => write!(f, "expected 'ID'"),
-            ErrorType::InvalidOutputID => write!(f, "expected -'ID'"),
-            ErrorType::InvalidPin => write!(f, "expected '0' or '1'"),
-            ErrorType::InvalidInputPin => write!(f, "expected pattern +'ID'->'WIRE'"),
-            ErrorType::InvalidGate => write!(f, "expected 'GATE'->'WIRE' pattern"),
-            ErrorType::InvalidWire => write!(f, "expected 'ID:'PIN' pattern"),
-            ErrorType::Unknown => write!(f, "unknown parser error"),
+            ErrorType::InvalidInputID => write!(f, "invalid input ID"),
+            ErrorType::InvalidGateID => write!(f, "invalid gate ID"),
+            ErrorType::InvalidOutputID => write!(f, "invalid output ID"),
+            ErrorType::InvalidPin => write!(f, "invalid pin"),
+            ErrorType::InvalidInputPin => write!(f, "invalid input pin"),
+            ErrorType::InvalidGate => write!(f, "invalid gate"),
+            ErrorType::InvalidWire => write!(f, "invalid wire"),
+            ErrorType::InvalidMetaInfo => write!(f, "invalid meta info"),
+            ErrorType::Unknown => write!(f, "unknown"),
         }
     }
 }
@@ -33,26 +40,32 @@ impl Display for ErrorType {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ParseError {
     err_type: ErrorType,
-    msg: String
+    msg: String,
 }
 
 impl ParseError {
-    pub fn new<T: Display>(err_type: ErrorType, expr: T) -> ParseError {
-       ParseError{
-           err_type: err_type,
-           msg: format!("{} : {}", err_type, expr),
-       }
+    pub fn new(err_type: ErrorType, msg: &str) -> ParseError {
+        ParseError {
+            err_type: err_type,
+            msg: format!("{}", msg),
+        }
     }
 }
 
-impl ErrorTrait for ParseError {
+impl Error for ParseError {
     fn description(&self) -> &str {
-         self.msg.as_ref()
+        self.msg.as_ref()
+    }
+}
+
+impl From<io::Error> for ParseError {
+    fn from(err: io::Error) -> Self {
+        ParseError::new(ErrorType::IOError, err.description())
     }
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "error: {}", self.msg)
+        write!(f, "{}: {}", self.err_type, self.msg)
     }
 }

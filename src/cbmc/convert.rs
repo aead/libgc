@@ -89,11 +89,11 @@ impl<'a> Converter<'a> {
 
     pub fn create_meta_info(&self, inputs: &Vec<IOPin>, gates: &Vec<Gate>, constant: Option<Constant>) -> IOResult<()>{
         let mut writer: LineWriter<File> = try!(self.open_file(META_INFO));
-        try!(writer.write_fmt(format_args!("INPUT {}", inputs.len())));
+        try!(writer.write_fmt(format_args!("INPUTS = {}", inputs.len())));
         try!(writer.write_all(NEW_LINE));
-        try!(writer.write_fmt(format_args!("GATES {}", gates.len()+1)));
+        try!(writer.write_fmt(format_args!("GATES = {}", gates.len()+1)));
         try!(writer.write_all(NEW_LINE));
-        try!(writer.write_fmt(format_args!("OUPUTS {}", count_outputs(gates))));
+        try!(writer.write_fmt(format_args!("OUTPUTS = {}", count_outputs(gates))));
         match constant {
             Some(cons) => {
                 try!(writer.write_all(NEW_LINE));

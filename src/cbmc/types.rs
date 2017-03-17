@@ -355,7 +355,7 @@ impl Display for Constant {
             return Ok(());
         }
         
-        try!(write!(f, "ONE->"));
+        try!(write!(f, "ONE = "));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
             

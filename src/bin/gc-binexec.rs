@@ -5,7 +5,8 @@ use std::env;
 use std::path::Path;
 use std::process;
 
-use libgc::circuit::binary::BinaryCircuit;
+use libgc::parser;
+use libgc::circuit::binary::Circuit;
 
 macro_rules! fail_on_error {
     ($exp:expr, $msg:expr) => {
@@ -43,17 +44,21 @@ pub fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.len() >= 2 && args[0].starts_with("-c") {
         let path = fail_on_error!(fs::canonicalize(Path::new(args[1].as_str())), args[1]);
-        let mut circuit = BinaryCircuit::new(path.as_path());
+        let info = fail_on_error!(parser::parse_meta_info(path.as_path()));
+        let mut c: Circuit = fail_on_error!(Circuit::new(info));
 
         let mut i = 1;
         for arg in args.into_iter().skip(2) {
             if arg.trim() == "1" {
-                circuit.set_input_pin(i);
+                c.set_input(i, 1);
+            } else {
+                c.set_input(i, 0);
             }
             i += 1
         }
 
-        let out_bits = fail_on_error!(circuit.execute());
+        fail_on_error!(c.execute());
+        let out_bits = c.collect_output();
         for bit in out_bits {
             print!("{} ", bit);
         }

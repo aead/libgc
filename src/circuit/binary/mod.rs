@@ -1,125 +1,236 @@
 mod error;
 
-use std::path::{Path,PathBuf};
-use std::io::{BufRead, BufReader};
-use std::fs::File;
+use std::path::PathBuf;
 use std::collections::HashMap;
 use self::error::ExecError;
-use super::super::parser::types::{ID, Pin, GateType, Wire, Gate, InputPin};
+
+use super::super::parser;
+use super::super::parser::MetaInfo;
+use super::super::parser::types::*;
+use super::super::parser::types::ID::*;
+use super::super::parser::types::GateType::*;
 
 type Entry = (ID, Pin);
 
-pub struct BinaryCircuit<'a> {
-    path: &'a Path,
+pub struct Circuit {
+    info: MetaInfo,
     input: HashMap<ID, u8>,
+    output: HashMap<ID, u8>,
     lookup: HashMap<Entry, u8>,
-    output: HashMap<ID, u8>
+    sub: HashMap<String, Circuit>,
 }
 
-impl<'a> BinaryCircuit<'a> {
-
-    pub fn new(path: &Path) -> BinaryCircuit{
-        BinaryCircuit{
-            path: path,
+impl Circuit {
+    pub fn new(info: MetaInfo) -> Result<Circuit, ExecError> {
+        let mut c = Circuit {
+            info: info,
             input: HashMap::new(),
-            lookup: HashMap::new(),
             output: HashMap::new(),
-        }
-    }
-
-    pub fn execute(&mut self) -> Result<Vec<u8>,ExecError>{
-        let mut buf = PathBuf::new();
-        buf.push(self.path);
-        buf.push(Path::new("circuit.txt"));
-        
-        let circuit = BufReader::new(try!(File::open(buf.as_path())));
-        for line in circuit.lines(){
-            let token = try!(line);
-            if token.starts_with("+"){
-                let input = try!(InputPin::parse(token.as_str()));
-                for wire in &input {
-                    try!(self.process_input(input.id(), wire));
-                }
-                self.input.remove(&(input.id()).into());
-            }else{
-                let gate = try!(Gate::parse(token.as_str()));
-                try!(self.process_gate(&gate));
+            lookup: HashMap::new(),
+            sub: HashMap::new(),
+        };
+        if !c.info.sub_circuits.is_empty() {
+            for (key, val) in &(c.info.sub_circuits) {
+                let path = PathBuf::from(val).join("circuit.txt");
+                let inf = try!(parser::parse_meta_info(path.as_path()));
+                c.sub.insert(key.clone(), try!(Circuit::new(inf)));
             }
         }
-        self.output()
-    }
-
-    pub fn set_input_pin(&mut self, id: u64){
-        self.input.insert(ID::Input(id), 1);
-    }
-
-    pub fn input(&mut self) -> Vec<u8>{
-        let mut in_bits = Vec::with_capacity(self.input.len());
-        let mut id = 1;
-        while !self.input.is_empty() {
-            match self.input.remove(&ID::Input(id)) {
-                Some(val) => in_bits.push(val),
-                _ => in_bits.push(0),
-            };
-            id += 1;
-        }
-        in_bits
-    }
-
-    pub fn output(&mut self) -> Result<Vec<u8>,ExecError> {
-        let mut out_bits = Vec::with_capacity(self.output.len());
-        let mut id = 1;
-        while !self.output.is_empty() {
-            try!(match self.output.remove(&ID::Output(id)) {
-                Some(val) => Ok(out_bits.push(val)),
-                _ => Err(ExecError::new(format!("no output bit for {}", ID::Output(id)))),
-            });
-            id += 1;
-        }
-        Ok(out_bits)
-    }
-
-    fn process_input(&mut self, id: ID, wire: &Wire) -> Result<(),ExecError>{
-        let value = match self.input.get(&id){
-            Some(val) => *val,
-            None => 0,
+        match c.info.one {
+            Some(ref node) => {
+                for edge in node.edges() {
+                    match edge.id() {
+                        Output(id) => {
+                            c.output.insert(Output(id), 1);
+                        }
+                        Gate(id) => {
+                            let pin = try!(Circuit::expect_some(edge.pin(), format!("ONE: pin is required for edge: {}", edge)));
+                            c.lookup.insert((Gate(id), pin), 1);
+                        }
+                        Input(id) => {
+                            let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
+                            let sub: &mut Circuit = try!(Circuit::expect_some(c.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                            sub.set_input(id, 1);
+                        }
+                        _ => {
+                            return Err(ExecError::from(format!("invalid edge: {}", edge)));
+                        },
+                    }
+                }
+            },
+            None => (),
         };
-        try!(match wire.pin() {
-            Some(pin) => Ok(self.lookup.insert((wire.dst(), pin), value)),
-            _ => Err(ExecError::new(format!("no destination pin for {}->{}", id, wire))),
-        });
+        Ok(c)
+    }
+
+    pub fn is_executable(&self) -> bool {
+        self.info.inputs == self.input.len() as u64
+    }
+
+    pub fn set_input(&mut self, id: u64, val: u8) {
+        if val == 0 {
+            self.input.insert(ID::Input(id), 0);
+        } else {
+            self.input.insert(ID::Input(id), 1);
+        }
+
+    }
+
+    pub fn get_output(&self, id: u64) -> Result<u8, ExecError> {
+        match self.output.get(&Output(id)) {
+            Some(val) => Ok(*val),
+            None => Err(ExecError::from(format!("no output for id {}", id))),
+        }
+    }
+
+    pub fn collect_output(&self) -> Vec<u8> {
+        let mut output = Vec::with_capacity(self.output.len());
+        let mut i = 1;
+        while i < self.output.len()+1 {
+            let v = self.output.get(&Output(i as u64)).unwrap();
+            output.push(*v);
+            i += 1;
+        }
+        output
+    }
+
+    pub fn execute(&mut self) -> Result<(),ExecError> {
+        if !self.is_executable() {
+            return Err(ExecError::from("circuit is not executable"));
+        }
+        let path = PathBuf::from(self.info.path.as_path()).join("circuit.txt");
+        for node in try!(parser::open_circuit(path.as_path())) {
+            let mut node: Node = try!(node);
+
+            try!(match node.id() {
+                ID::Input(_) => self.process_input(&mut node),
+                ID::Output(_) => self.process_output(&mut node),
+                ID::Gate(_) => self.process_gate(&mut node),
+                _ => Err(ExecError::from(format!("invalid node id: {}", node.id()))),
+            });
+        }
         Ok(())
     }
 
-    fn process_gate(&mut self, gate: &Gate) -> Result<(),ExecError> {
-        let left = try!(match self.lookup.remove(&(gate.id(), Pin::Left)) {
+    fn check<T>(expr: bool, msg: T) -> Result<(), ExecError> where ExecError: From<T> {
+        match expr {
+            true => Ok(()),
+            false => Err(ExecError::from(msg)),
+        }
+    }
+
+    fn expect_some<O, T>(expr: Option<O>, msg: T) -> Result<O, ExecError> where ExecError: From<T> {
+        match expr {
             Some(val) => Ok(val),
-            _ => Err(ExecError::new(format!("{}:{} not found", gate.id(), Pin::Left))),
-        });
-        let right = if gate.gate_type() == GateType::NOT {
-            0
-        } else {
-            try!(match self.lookup.remove(&(gate.id(), Pin::Right)) {
-                Some(val) => Ok(val),
-                _ => Err(ExecError::new(format!("{}:{} not found", gate.id(), Pin::Right))),
-            })
-        };
+            None => Err(ExecError::from(msg)),
+        }
+    }
 
-        let result = match gate.gate_type() {
-            GateType::AND => left & right,
-            GateType::XOR => left ^ right,
-            GateType::OR => left | right,
-            GateType::NOT => (!left) & 0x01,
-        };
+    fn process_input(&mut self, node: &mut Node) -> Result<(),ExecError> {
+        let val = *try!(Circuit::expect_some(self.input.get(&node.id()), format!("missing input value {}", node.id())));
+        for edge in node.edges() {
+            match edge.circuit() {
+                Some(key) => {
+                    try!(Circuit::check(edge.id().is_input(), format!("invalid edge: expected input id - {}", edge)));
+                    let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                    sub.set_input(edge.id().into(), val);
+                },
+                None => {
+                    match edge.id() {
+                        Output(id) => {
+                            self.output.insert(Output(id), val);
+                        },
+                        Gate(id) => {
+                            let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                            self.lookup.insert((Gate(id), pin), val);
+                        },
+                        _ => {
+                            return Err(ExecError::from(format!("invalid edge: {}", edge)));
+                        },
+                    }
+                }
+            };   
+        }
+        Ok(())
+    }
 
-        for wire in gate {
-            if wire.is_output(){
-                self.output.insert(wire.dst(), result);
-            }else{
-                try!(match wire.pin() {
-                    Some(pin) => Ok(self.lookup.insert((wire.dst(), pin), result)),
-                    _ => Err(ExecError::new(format!("no destination pin for {}->{}", gate.id(), wire))),
-                });
+    fn process_output(&mut self, node: &mut Node) -> Result<(),ExecError> {
+        let val = try!(self.get_output(node.id().into()));
+        match node.circuit() {
+            Some(_) => {
+                for edge in node.edges() {
+                    try!(Circuit::check(edge.id().is_input(), format!("invalid edge: expected input id - {}", edge)));
+                    let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
+                    let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                    sub.set_input(edge.id().into(), val);
+                }
+            },
+            None => {
+                for edge in node.edges() {
+                     match edge.id() {
+                        Output(id) => {
+                            self.output.insert(Output(id), val);
+                        },
+                        Gate(id) => {
+                            let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                            self.lookup.insert((Gate(id), pin), val);
+                        },
+                        Input(id) => {
+                            let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
+                            let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                            sub.set_input(id, val);
+                        },
+                        _ => {
+                            return Err(ExecError::from(format!("invalid edge: {}", edge)));
+                        },
+                    };
+                }
+            },
+        }
+        Ok(())
+    }
+
+    fn process_gate(&mut self, node: &mut Node) -> Result<(),ExecError> {
+        try!(Circuit::check(node.circuit().is_none(), format!("node with id: {} cannot reference sub circuit", node.id())));
+        let gate_type = try!(Circuit::expect_some(node.gate_type(), format!("node with id: {} must have a gate type", node.id())));
+        let val = match gate_type.operands() {
+            1 => {
+                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)), format!("cannot find value for node: {}", node.id())));
+                !v0 & 0x01  // NOT 
+            },
+            2 => {
+                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)), format!("cannot find value for left pin of node: {}", node.id())));
+                let v1 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Right)), format!("cannot find value for right pin of node: {}", node.id())));
+                match gate_type {
+                    AND => v0 & v1,
+                    XOR => v0 ^ v1,
+                    OR => v0 | v1,
+                    _ => {
+                        panic!("impossible situation");
+                    },
+                }
+            },
+            _ => {
+                panic!("impossible situation");
+            },
+        };
+        for edge in node.edges() {
+            match edge.id() {
+                Output(id) => {
+                    self.output.insert(Output(id), val);
+                },
+                Gate(id) => {
+                    let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                    self.lookup.insert((Gate(id), pin), val);
+                }
+                Input(id) => {
+                     let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
+                     let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                     sub.set_input(id, val);
+                },
+                _ => {
+                    return Err(ExecError::from(format!("invalid edge: {}", edge)));
+                },
             }
         }
         Ok(())
