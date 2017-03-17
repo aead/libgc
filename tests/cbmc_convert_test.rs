@@ -7,8 +7,7 @@ use libgc::circuit::binary;
 
 #[test]
 fn parse_cbmc_sum(){
-    //let path = env::current_dir().unwrap().join("tests").join("cbmc_output").join("sum");
-    let path = env::home_dir().unwrap().join("rust/libgc/tests/cbmc_output/sum");
+    let path = env::current_dir().unwrap().join("tests").join("cbmc_output").join("sum");
     let parser: cbmc::Parser = cbmc::Parser::new(path.as_path()).unwrap();   
     parser.parse_inputs().unwrap();
     parser.parse_gates().unwrap();
@@ -17,21 +16,19 @@ fn parse_cbmc_sum(){
 
 #[test]
 fn parse_libgc() {
-    //let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum").join("meta_info.txt");
-    let path = env::home_dir().unwrap().join("rust/libgc/tests/libgc_output/sum/");
+    let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum");
     parser::parse_meta_info(path.as_path()).unwrap();
 
-    let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum").join("circuit.txt");
+    let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum");
     parser::parse_circuit(path.as_path()).unwrap();
 }
 
 #[test]
 fn execute_libgc_sum(){
-    //let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum").join("meta_info.txt");
-    let path = env::home_dir().unwrap().join("rust/libgc/tests/libgc_output/sum/");
+    let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum");
     let info = parser::parse_meta_info(path.as_path()).unwrap();
     let mut circuit = binary::Circuit::new(info).unwrap();
-    
+
     // test 0 + 0 = 0
     set_pin_from_to(&mut circuit, 1, 64, 0);
     circuit.execute().unwrap();

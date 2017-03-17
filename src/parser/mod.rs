@@ -77,7 +77,8 @@ impl<B: BufRead> Iterator for Circuit<B> {
 }
 
 pub fn open_circuit(path: &Path) -> Result<Circuit<BufReader<File>>, ParseError> {
-    let reader = BufReader::new(try!(File::open(path)));
+    let p = PathBuf::from(path).join("circuit.txt");
+    let reader = BufReader::new(try!(File::open(p.as_path())));
     Ok(Circuit {
         ctx: Context::new(),
         lines: reader.lines(),

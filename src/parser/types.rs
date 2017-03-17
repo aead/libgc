@@ -1,6 +1,16 @@
 use std::fmt;
 use std::convert;
 
+/// ID represents an unique node / edge identifier of the circuit graph.
+/// There a three general purpose node types
+///
+///   - INPUT   
+///   - OUTPUT
+///   - GATE
+///
+/// and a special Const for the ONE constant of a circuit.
+/// Notice that an `ID::Input(5)` is different from an `ID::Gate(5)`.
+///
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ID {
     Input(u64),
@@ -32,6 +42,8 @@ impl convert::Into<u64> for ID {
 }
 
 impl ID {
+    /// Returns true if the ID is ID::Input.
+    #[inline]
     pub fn is_input(&self) -> bool {
         match *self {
             ID::Input(_) => true,
@@ -39,6 +51,8 @@ impl ID {
         }
     }
 
+    /// Returns true if the ID is ID::Output.
+    #[inline]
     pub fn is_output(&self) -> bool {
         match *self {
             ID::Output(_) => true,
@@ -46,6 +60,8 @@ impl ID {
         }
     }
 
+    /// Returns true if the ID is ID::Gate.
+    #[inline]
     pub fn is_gate(&self) -> bool {
         match *self {
             ID::Gate(_) => true,
@@ -54,6 +70,13 @@ impl ID {
     }
 }
 
+/// GateType represents the four basic gate types:
+///
+///   - AND
+///   - XOR
+///   - OR
+///   - NOT
+///
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum GateType {
     XOR,
@@ -82,6 +105,13 @@ impl fmt::Display for GateType {
     }
 }
 
+/// Pin represents the two different pins of a binary Gate:
+///
+///   - Left (= 0)
+///   - Right (= 1)
+///
+/// NOT gates use always the Left pin.
+///
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Pin {
     Left,
@@ -97,6 +127,10 @@ impl fmt::Display for Pin {
     }
 }
 
+/// An edge is a connection from one node to another node.
+/// An edge is equivalent to a wire if you prefer to think in gates and wires.
+/// An edge can also connect two nodes of different circuits.
+///
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Edge {
     id: ID,
@@ -145,6 +179,14 @@ impl Edge {
     }
 }
 
+/// A node represents an entity within a circuit. This can be a:
+///
+/// - "input pin / IOPin / IOGate"
+/// - gate
+/// - "output pin / IOPin / IOGate"
+///
+/// Nodes are connected through edges. A circuit is logically a graph.
+///
 pub struct Node {
     id: ID,
     gate_type: Option<GateType>,

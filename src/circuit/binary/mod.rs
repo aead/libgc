@@ -31,7 +31,7 @@ impl Circuit {
         };
         if !c.info.sub_circuits.is_empty() {
             for (key, val) in &(c.info.sub_circuits) {
-                let path = PathBuf::from(val).join("circuit.txt");
+                let path = PathBuf::from(val);
                 let inf = try!(parser::parse_meta_info(path.as_path()));
                 c.sub.insert(key.clone(), try!(Circuit::new(inf)));
             }
@@ -107,7 +107,7 @@ impl Circuit {
         if !self.is_executable() {
             return Err(ExecError::from("circuit is not executable"));
         }
-        let path = PathBuf::from(self.info.path.as_path()).join("circuit.txt");
+        let path = PathBuf::from(self.info.path.as_path());
         for node in try!(parser::open_circuit(path.as_path())) {
             let mut node: Node = try!(node);
 
