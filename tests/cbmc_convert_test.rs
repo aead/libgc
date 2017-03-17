@@ -19,17 +19,10 @@ fn parse_cbmc_sum(){
 fn parse_libgc() {
     //let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum").join("meta_info.txt");
     let path = env::home_dir().unwrap().join("rust/libgc/tests/libgc_output/sum/");
-    let info = parser::parse_meta_info(path.as_path()).unwrap();
+    parser::parse_meta_info(path.as_path()).unwrap();
 
     let path = env::current_dir().unwrap().join("tests").join("libgc_output").join("sum").join("circuit.txt");
-    match parser::parse_circuit(path.as_path()) {
-        Err(why) => println!("{}", why),
-        Ok(val) => {
-            for node in val {
-                //println!("{}", node);
-            }   
-        },
-    }
+    parser::parse_circuit(path.as_path()).unwrap();
 }
 
 #[test]
@@ -45,8 +38,6 @@ fn execute_libgc_sum(){
     let output: Vec<u8> = circuit.collect_output();
     let expected = vec![0u8; 32];
     assert_eq!(output, expected);
-
-    println!("Hallo");
 
     // test 1 + 0 = 1
     set_pin_from_to(&mut circuit, 1, 64, 0);

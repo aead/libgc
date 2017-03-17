@@ -35,21 +35,21 @@ impl ID {
     pub fn is_input(&self) -> bool {
         match *self {
             ID::Input(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_output(&self) -> bool {
         match *self {
             ID::Output(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
-     pub fn is_gate(&self) -> bool {
+    pub fn is_gate(&self) -> bool {
         match *self {
             ID::Gate(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -163,15 +163,17 @@ impl fmt::Display for Node {
             _ => write!(f, "{}", self.id),
         });
         if self.edges.len() > 0 {
+            let mut i = 0;
             try!(write!(f, "->"));
             for edge in &(self.edges) {
-                try!(write!(f, "{} ", edge));
+                try!(write!(f, "{}", edge));
+                if i < self.edges().len() - 1 {
+                    try!(write!(f, " "));
+                    i += 1;
+                }
             }
-            write!(f, "")
-        } else{
-            write!(f, "")
         }
-        
+        write!(f, "")
     }
 }
 

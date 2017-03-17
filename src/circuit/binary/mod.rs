@@ -44,20 +44,29 @@ impl Circuit {
                             c.output.insert(Output(id), 1);
                         }
                         Gate(id) => {
-                            let pin = try!(Circuit::expect_some(edge.pin(), format!("ONE: pin is required for edge: {}", edge)));
+                            let pin = try!(Circuit::expect_some(edge.pin(),
+                                                                format!("ONE: pin is required \
+                                                                         for edge: {}",
+                                                                        edge)));
                             c.lookup.insert((Gate(id), pin), 1);
                         }
                         Input(id) => {
-                            let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
-                            let sub: &mut Circuit = try!(Circuit::expect_some(c.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                            let key = try!(Circuit::expect_some(edge.circuit(),
+                                                                format!("invalid edge: \
+                                                                         expected sub circuit \
+                                                                         - {}",
+                                                                        edge)));
+                            let sub: &mut Circuit =
+                                try!(Circuit::expect_some(c.sub.get_mut(&key),
+                                                          format!("unknown sub circuit: {}", key)));
                             sub.set_input(id, 1);
                         }
                         _ => {
                             return Err(ExecError::from(format!("invalid edge: {}", edge)));
-                        },
+                        }
                     }
                 }
-            },
+            }
             None => (),
         };
         Ok(c)
@@ -86,7 +95,7 @@ impl Circuit {
     pub fn collect_output(&self) -> Vec<u8> {
         let mut output = Vec::with_capacity(self.output.len());
         let mut i = 1;
-        while i < self.output.len()+1 {
+        while i < self.output.len() + 1 {
             let v = self.output.get(&Output(i as u64)).unwrap();
             output.push(*v);
             i += 1;
@@ -94,7 +103,7 @@ impl Circuit {
         output
     }
 
-    pub fn execute(&mut self) -> Result<(),ExecError> {
+    pub fn execute(&mut self) -> Result<(), ExecError> {
         if !self.is_executable() {
             return Err(ExecError::from("circuit is not executable"));
         }
@@ -112,125 +121,170 @@ impl Circuit {
         Ok(())
     }
 
-    fn check<T>(expr: bool, msg: T) -> Result<(), ExecError> where ExecError: From<T> {
+    fn check<T>(expr: bool, msg: T) -> Result<(), ExecError>
+        where ExecError: From<T>
+    {
         match expr {
             true => Ok(()),
             false => Err(ExecError::from(msg)),
         }
     }
 
-    fn expect_some<O, T>(expr: Option<O>, msg: T) -> Result<O, ExecError> where ExecError: From<T> {
+    fn expect_some<O, T>(expr: Option<O>, msg: T) -> Result<O, ExecError>
+        where ExecError: From<T>
+    {
         match expr {
             Some(val) => Ok(val),
             None => Err(ExecError::from(msg)),
         }
     }
 
-    fn process_input(&mut self, node: &mut Node) -> Result<(),ExecError> {
-        let val = *try!(Circuit::expect_some(self.input.get(&node.id()), format!("missing input value {}", node.id())));
+    fn process_input(&mut self, node: &mut Node) -> Result<(), ExecError> {
+        let val = *try!(Circuit::expect_some(self.input.get(&node.id()),
+                                             format!("missing input value {}", node.id())));
         for edge in node.edges() {
             match edge.circuit() {
                 Some(key) => {
-                    try!(Circuit::check(edge.id().is_input(), format!("invalid edge: expected input id - {}", edge)));
-                    let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                    try!(Circuit::check(edge.id().is_input(),
+                                        format!("invalid edge: expected input id - {}", edge)));
+                    let sub: &mut Circuit =
+                        try!(Circuit::expect_some(self.sub.get_mut(&key),
+                                                  format!("unknown sub circuit: {}", key)));
                     sub.set_input(edge.id().into(), val);
-                },
+                }
                 None => {
                     match edge.id() {
                         Output(id) => {
                             self.output.insert(Output(id), val);
-                        },
+                        }
                         Gate(id) => {
-                            let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                            let pin = try!(Circuit::expect_some(edge.pin(),
+                                                                format!("pin is required for \
+                                                                         edge: {}",
+                                                                        edge)));
                             self.lookup.insert((Gate(id), pin), val);
-                        },
+                        }
                         _ => {
                             return Err(ExecError::from(format!("invalid edge: {}", edge)));
-                        },
+                        }
                     }
                 }
-            };   
+            };
         }
         Ok(())
     }
 
-    fn process_output(&mut self, node: &mut Node) -> Result<(),ExecError> {
+    fn process_output(&mut self, node: &mut Node) -> Result<(), ExecError> {
         let val = try!(self.get_output(node.id().into()));
         match node.circuit() {
             Some(_) => {
                 for edge in node.edges() {
-                    try!(Circuit::check(edge.id().is_input(), format!("invalid edge: expected input id - {}", edge)));
-                    let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
-                    let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                    try!(Circuit::check(edge.id().is_input(),
+                                        format!("invalid edge: expected input id - {}", edge)));
+                    let key = try!(Circuit::expect_some(edge.circuit(),
+                                                        format!("invalid edge: expected sub \
+                                                                 circuit - {}",
+                                                                edge)));
+                    let sub: &mut Circuit =
+                        try!(Circuit::expect_some(self.sub.get_mut(&key),
+                                                  format!("unknown sub circuit: {}", key)));
                     sub.set_input(edge.id().into(), val);
                 }
-            },
+            }
             None => {
                 for edge in node.edges() {
-                     match edge.id() {
+                    match edge.id() {
                         Output(id) => {
                             self.output.insert(Output(id), val);
-                        },
+                        }
                         Gate(id) => {
-                            let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                            let pin = try!(Circuit::expect_some(edge.pin(),
+                                                                format!("pin is required for \
+                                                                         edge: {}",
+                                                                        edge)));
                             self.lookup.insert((Gate(id), pin), val);
-                        },
+                        }
                         Input(id) => {
-                            let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
-                            let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
+                            let key = try!(Circuit::expect_some(edge.circuit(),
+                                                                format!("invalid edge: \
+                                                                         expected sub circuit \
+                                                                         - {}",
+                                                                        edge)));
+                            let sub: &mut Circuit =
+                                try!(Circuit::expect_some(self.sub.get_mut(&key),
+                                                          format!("unknown sub circuit: {}", key)));
                             sub.set_input(id, val);
-                        },
+                        }
                         _ => {
                             return Err(ExecError::from(format!("invalid edge: {}", edge)));
-                        },
+                        }
                     };
                 }
-            },
+            }
         }
         Ok(())
     }
 
-    fn process_gate(&mut self, node: &mut Node) -> Result<(),ExecError> {
-        try!(Circuit::check(node.circuit().is_none(), format!("node with id: {} cannot reference sub circuit", node.id())));
-        let gate_type = try!(Circuit::expect_some(node.gate_type(), format!("node with id: {} must have a gate type", node.id())));
+    fn process_gate(&mut self, node: &mut Node) -> Result<(), ExecError> {
+        try!(Circuit::check(node.circuit().is_none(),
+                            format!("node with id: {} cannot reference sub circuit", node.id())));
+        let gate_type = try!(Circuit::expect_some(node.gate_type(),
+                                                  format!("node with id: {} must have a gate \
+                                                           type",
+                                                          node.id())));
         let val = match gate_type.operands() {
             1 => {
-                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)), format!("cannot find value for node: {}", node.id())));
-                !v0 & 0x01  // NOT 
-            },
+                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)),
+                                                   format!("cannot find value for node: {}",
+                                                           node.id())));
+                !v0 & 0x01  // NOT
+            }
             2 => {
-                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)), format!("cannot find value for left pin of node: {}", node.id())));
-                let v1 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Right)), format!("cannot find value for right pin of node: {}", node.id())));
+                let v0 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Left)),
+                                                   format!("cannot find value for left pin of \
+                                                            node: {}",
+                                                           node.id())));
+                let v1 = try!(Circuit::expect_some(self.lookup.remove(&(node.id(), Pin::Right)),
+                                                   format!("cannot find value for right pin of \
+                                                            node: {}",
+                                                           node.id())));
                 match gate_type {
                     AND => v0 & v1,
                     XOR => v0 ^ v1,
                     OR => v0 | v1,
                     _ => {
                         panic!("impossible situation");
-                    },
+                    }
                 }
-            },
+            }
             _ => {
                 panic!("impossible situation");
-            },
+            }
         };
         for edge in node.edges() {
             match edge.id() {
                 Output(id) => {
                     self.output.insert(Output(id), val);
-                },
+                }
                 Gate(id) => {
-                    let pin = try!(Circuit::expect_some(edge.pin(), format!("pin is required for edge: {}", edge)));
+                    let pin = try!(Circuit::expect_some(edge.pin(),
+                                                        format!("pin is required for edge: {}",
+                                                                edge)));
                     self.lookup.insert((Gate(id), pin), val);
                 }
                 Input(id) => {
-                     let key = try!(Circuit::expect_some(edge.circuit(), format!("invalid edge: expected sub circuit - {}", edge)));
-                     let sub: &mut Circuit = try!(Circuit::expect_some(self.sub.get_mut(&key), format!("unknown sub circuit: {}", key)));
-                     sub.set_input(id, val);
-                },
+                    let key = try!(Circuit::expect_some(edge.circuit(),
+                                                        format!("invalid edge: expected sub \
+                                                                 circuit - {}",
+                                                                edge)));
+                    let sub: &mut Circuit =
+                        try!(Circuit::expect_some(self.sub.get_mut(&key),
+                                                  format!("unknown sub circuit: {}", key)));
+                    sub.set_input(id, val);
+                }
                 _ => {
                     return Err(ExecError::from(format!("invalid edge: {}", edge)));
-                },
+                }
             }
         }
         Ok(())

@@ -51,17 +51,17 @@ impl Display for ID {
 
 impl ID {
     #[inline]
-    pub fn as_index(self) -> usize{
+    pub fn as_index(self) -> usize {
         let id = match self {
             ID::Input(id) => id,
             ID::Output(id) => id,
             ID::Gate(id) => id,
         };
-        (id-1) as usize
+        (id - 1) as usize
     }
 
     #[inline]
-    pub fn is_input(self) -> bool{
+    pub fn is_input(self) -> bool {
         match self {
             ID::Input(_) => true,
             _ => false,
@@ -69,7 +69,7 @@ impl ID {
     }
 
     #[inline]
-    pub fn is_output(self) -> bool{
+    pub fn is_output(self) -> bool {
         match self {
             ID::Output(_) => true,
             _ => false,
@@ -77,7 +77,7 @@ impl ID {
     }
 
     #[inline]
-    pub fn is_gate(self) -> bool{
+    pub fn is_gate(self) -> bool {
         match self {
             ID::Gate(_) => true,
             _ => false,
@@ -97,7 +97,7 @@ impl IntoIterator for IOPin {
 
     fn into_iter(self) -> Self::IntoIter {
         self.wires.into_iter()
-    } 
+    }
 }
 
 impl<'a> IntoIterator for &'a IOPin {
@@ -119,7 +119,7 @@ impl Display for IOPin {
         try!(write!(f, "{}->", self.id));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
-            if i < len-1 {
+            if i < len - 1 {
                 try!(write!(f, " "));
                 i += 1;
             }
@@ -179,7 +179,7 @@ impl IOPin {
     #[inline]
     pub fn id(&self) -> ID {
         self.id
-    }    
+    }
 
     #[inline]
     pub fn connect(&mut self, wire: Wire) {
@@ -208,16 +208,16 @@ impl Into<u8> for Pin {
         match self {
             Pin::Left => 0,
             Pin::Right => 1,
-       }
+        }
     }
 }
 
 impl Display for Pin {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-       match *self {
+        match *self {
             Pin::Left => write!(f, "0"),
-            Pin::Right =>  write!(f, "1"),
-       }
+            Pin::Right => write!(f, "1"),
+        }
     }
 }
 
@@ -231,7 +231,7 @@ impl Display for Wire {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match self.pin {
             Some(pin) => write!(f, "{}:{}", self.to, pin),
-            None => write!(f, "{}",self.to),
+            None => write!(f, "{}", self.to),
         }
     }
 }
@@ -315,9 +315,7 @@ pub struct Constant {
 
 impl Constant {
     pub fn new() -> Constant {
-        Constant{
-            wires: Vec::new(),
-        }
+        Constant { wires: Vec::new() }
     }
 
     pub fn parse(expr: &str) -> Result<Constant, Error> {
@@ -329,12 +327,12 @@ impl Constant {
         if token != "ONE" {
             fail!(0, token, "dosn't match constant identifier 'ONE'");
         }
-        
+
         let mut wires = Vec::new();
         for token in tokens.iter().skip(1) {
             wires.push(try!(Wire::parse(token.trim(), 0)));
         }
-        Ok(Constant{wires: wires})
+        Ok(Constant { wires: wires })
     }
 
     #[inline]
@@ -354,12 +352,12 @@ impl Display for Constant {
         if len == 0 {
             return Ok(());
         }
-        
+
         try!(write!(f, "ONE = "));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
-            
-            if i < len-1 {
+
+            if i < len - 1 {
                 try!(write!(f, " "));
                 i += 1;
             }
@@ -374,7 +372,7 @@ impl IntoIterator for Constant {
 
     fn into_iter(self) -> Self::IntoIter {
         self.wires.into_iter()
-    } 
+    }
 }
 
 impl<'a> IntoIterator for &'a Constant {
@@ -437,12 +435,12 @@ impl Display for Gate {
         if len == 0 {
             return Ok(());
         }
-        
+
         try!(write!(f, "{}:{}->", self.gtype, self.id));
         for wire in &self.wires {
             try!(write!(f, "{}", wire));
-            
-            if i < len-1 {
+
+            if i < len - 1 {
                 try!(write!(f, " "));
                 i += 1;
             }
@@ -457,7 +455,7 @@ impl IntoIterator for Gate {
 
     fn into_iter(self) -> Self::IntoIter {
         self.wires.into_iter()
-    } 
+    }
 }
 
 impl<'a> IntoIterator for &'a Gate {
@@ -479,7 +477,6 @@ impl<'a> IntoIterator for &'a mut Gate {
 }
 
 impl Gate {
-    
     pub fn new(gate_type: GateType, id: u64) -> Gate {
         Gate {
             gtype: gate_type,
@@ -545,7 +542,7 @@ impl Gate {
     }
 
     #[inline]
-    pub fn get_type(&self) -> GateType{
+    pub fn get_type(&self) -> GateType {
         self.gtype
     }
 

@@ -1,6 +1,6 @@
 
 use std::error::Error as ErrorTrait;
-use std::fmt::{Display,Result,Formatter};
+use std::fmt::{Display, Result, Formatter};
 use std::convert::From;
 use std::io;
 use std::num;
@@ -13,7 +13,7 @@ pub struct Error {
 
 impl Error {
     pub fn new(line: u64, msg: String) -> Error {
-       Self::_new(Some(line), msg)
+        Self::_new(Some(line), msg)
     }
 
     #[inline]
@@ -21,25 +21,25 @@ impl Error {
         Error {
             line: line,
             msg: msg,
-       }
+        }
     }
 }
 
 impl ErrorTrait for Error {
     fn description(&self) -> &str {
-         self.msg.as_ref()
+        self.msg.as_ref()
     }
 }
 
 
-impl From<io::Error> for Error{
-    fn from(err: io::Error) -> Error{
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
         Error::_new(None, format!("{}", err))
     }
 }
 
 impl From<num::ParseIntError> for Error {
-    fn from(err: num::ParseIntError) -> Error{
+    fn from(err: num::ParseIntError) -> Error {
         Error::_new(None, format!("{}", err))
     }
 }
