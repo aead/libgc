@@ -5,4 +5,5 @@ For more information about the libgc format take a look at the [wiki page](https
 
 What can be done with libgc?
  - Convert the output of the cbmc-gc compiler to the (smaller and more flexible) libgc format. (gc-convert)
+ - Topologic sorting of the gbmc-gc compiler output
  - Execute the binary circuit - even if the circuit consists of sub-circuits. (gc-binexec)
